@@ -1,6 +1,5 @@
 import { useMemo, useRef } from 'react'
 import { useFrame, ThreeEvent } from '@react-three/fiber'
-// useFrame still used in Satellites component
 import * as THREE from 'three'
 import { useStore } from '@/stores/useStore'
 import type { SatellitePosition } from '@/types'
@@ -84,9 +83,16 @@ export function Satellites({ positions }: SatellitesProps) {
   )
 }
 
-// Selected satellite highlight - simple red dot
+// Selected satellite highlight - red marker without beam
 export function SelectedSatelliteHighlight() {
   const { selectedSatellite, satellites, selectedSatelliteId } = useStore()
+  const ringRef = useRef<THREE.Mesh>(null)
+
+  useFrame((_, delta) => {
+    if (ringRef.current) {
+      ringRef.current.rotation.z += delta * 2
+    }
+  })
 
   // Get position from satellites array if no detail loaded yet
   const satPos = selectedSatellite?.geographic || 
@@ -108,11 +114,26 @@ export function SelectedSatelliteHighlight() {
 
   return (
     <group position={[x, y, z]}>
-      {/* Red dot */}
-      <mesh>
-        <sphereGeometry args={[0.03, 16, 16]} />
-        <meshBasicMaterial color={0xff4444} />
+      {/* Pulsing ring */}
+      <mesh ref={ringRef}>
+        <ringGeometry args={[0.06, 0.08, 32]} />
+        <meshBasicMaterial color={0xff4444} transparent opacity={0.9} side={THREE.DoubleSide} />
       </mesh>
+      
+      {/* Outer glow sphere */}
+      <mesh>
+        <sphereGeometry args={[0.05, 16, 16]} />
+        <meshBasicMaterial color={0xff4444} transparent opacity={0.3} />
+      </mesh>
+      
+      {/* Bright center point */}
+      <mesh>
+        <sphereGeometry args={[0.025, 8, 8]} />
+        <meshBasicMaterial color={0xffffff} />
+      </mesh>
+      
+      {/* Point light */}
+      <pointLight color={0xff4444} intensity={1} distance={1} />
     </group>
   )
 }
