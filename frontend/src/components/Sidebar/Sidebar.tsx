@@ -3,20 +3,23 @@ import { SatellitesTab } from './SatellitesTab'
 import { AnalysisTab } from './AnalysisTab'
 import { LaunchesTab } from './LaunchesTab'
 import { SimulationTab } from './SimulationTab'
+import { OpsTab } from './OpsTab'
 import { 
   Satellite, 
   BarChart3, 
   Rocket, 
   PlayCircle,
+  Activity,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
 
 const tabs = [
   { id: 'satellites' as const, label: 'Satellites', icon: Satellite },
+  { id: 'ops' as const, label: 'Ops', icon: Activity },
   { id: 'analysis' as const, label: 'Analysis', icon: BarChart3 },
   { id: 'launches' as const, label: 'Launches', icon: Rocket },
-  { id: 'simulation' as const, label: 'Simulation', icon: PlayCircle },
+  { id: 'simulation' as const, label: 'Sim', icon: PlayCircle },
 ]
 
 export function Sidebar() {
@@ -60,6 +63,7 @@ export function Sidebar() {
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto p-4">
           {activeTab === 'satellites' && <SatellitesTab />}
+          {activeTab === 'ops' && <OpsTab />}
           {activeTab === 'analysis' && <AnalysisTab />}
           {activeTab === 'launches' && <LaunchesTab />}
           {activeTab === 'simulation' && <SimulationTab />}
