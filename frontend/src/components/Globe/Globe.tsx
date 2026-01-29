@@ -46,6 +46,12 @@ export function Globe() {
 
         {/* Controls */}
         <OrbitControls 
+          ref={(controls) => {
+            if (controls) {
+              // @ts-ignore - store ref for zoom buttons
+              window.__orbitControls = controls
+            }
+          }}
           enablePan={false}
           minDistance={8}
           maxDistance={50}
@@ -63,6 +69,18 @@ export function Globe() {
 function GlobeOverlay() {
   const { wsConnected, lastUpdate, stats } = useStore()
 
+  const handleZoom = (delta: number) => {
+    // @ts-ignore
+    const controls = window.__orbitControls
+    if (controls) {
+      const camera = controls.object
+      const currentDistance = camera.position.length()
+      const newDistance = Math.max(8, Math.min(50, currentDistance + delta))
+      camera.position.setLength(newDistance)
+      controls.update()
+    }
+  }
+
   return (
     <>
       {/* Connection status */}
@@ -79,17 +97,33 @@ function GlobeOverlay() {
         </div>
       </div>
 
+      {/* Zoom controls */}
+      <div className="absolute top-4 right-4 flex flex-col gap-1">
+        <button
+          onClick={() => handleZoom(-3)}
+          className="w-10 h-10 glass rounded-lg flex items-center justify-center text-xl font-bold hover:bg-white/10 transition"
+        >
+          +
+        </button>
+        <button
+          onClick={() => handleZoom(3)}
+          className="w-10 h-10 glass rounded-lg flex items-center justify-center text-xl font-bold hover:bg-white/10 transition"
+        >
+          −
+        </button>
+      </div>
+
       {/* Stats overlay */}
       <div className="absolute bottom-4 left-4 glass rounded-xl p-4">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <div className="text-gray-400">Satellites</div>
+            <div className="text-gray-400 text-xs">Satellites</div>
             <div className="text-2xl font-bold text-blue-400">
               {stats.totalSatellites.toLocaleString()}
             </div>
           </div>
           <div>
-            <div className="text-gray-400">Avg Altitude</div>
+            <div className="text-gray-400 text-xs">Avg Altitude</div>
             <div className="text-2xl font-bold text-green-400">
               {stats.averageAltitude} km
             </div>
@@ -104,23 +138,29 @@ function GlobeOverlay() {
 
       {/* Legend */}
       <div className="absolute bottom-4 right-4 glass rounded-xl p-3">
-        <div className="text-xs text-gray-400 mb-2">Altitude</div>
-        <div className="flex flex-col gap-1 text-xs">
+        <div className="text-xs text-gray-400 mb-2 font-medium">Altitude Legend</div>
+        <div className="flex flex-col gap-1.5 text-xs">
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-green-500" />
-            <span>&lt; 400 km</span>
+            <span className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]" />
+            <span className="text-gray-300">&lt; 400 km <span className="text-gray-500">(Low LEO)</span></span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-blue-500" />
-            <span>400-600 km</span>
+            <span className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.5)]" />
+            <span className="text-gray-300">400-600 km <span className="text-gray-500">(Starlink)</span></span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-yellow-500" />
-            <span>600-800 km</span>
+            <span className="w-3 h-3 rounded-full bg-yellow-500 shadow-[0_0_6px_rgba(234,179,8,0.5)]" />
+            <span className="text-gray-300">600-800 km <span className="text-gray-500">(High LEO)</span></span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-red-500" />
-            <span>&gt; 800 km</span>
+            <span className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]" />
+            <span className="text-gray-300">&gt; 800 km <span className="text-gray-500">(Upper)</span></span>
+          </div>
+        </div>
+        <div className="mt-2 pt-2 border-t border-white/10">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="w-3 h-3 rounded-full bg-red-400 ring-2 ring-red-400/50" />
+            <span className="text-gray-300">Selected</span>
           </div>
         </div>
       </div>

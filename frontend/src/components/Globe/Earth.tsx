@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, useEffect } from 'react'
 import { useFrame, useLoader } from '@react-three/fiber'
 import { Sphere } from '@react-three/drei'
 import * as THREE from 'three'
@@ -11,9 +11,47 @@ const EARTH_TEXTURE_URL = 'https://unpkg.com/three-globe@2.31.1/example/img/eart
 const EARTH_NIGHT_URL = 'https://unpkg.com/three-globe@2.31.1/example/img/earth-night.jpg'
 const EARTH_BUMP_URL = 'https://unpkg.com/three-globe@2.31.1/example/img/earth-topology.png'
 
+/**
+ * Calculate Greenwich Mean Sidereal Time (GMST)
+ * This determines Earth's rotation angle relative to the stars
+ */
+function calculateGMST(): number {
+  const now = new Date()
+  
+  // Julian Date calculation
+  const year = now.getUTCFullYear()
+  const month = now.getUTCMonth() + 1
+  const day = now.getUTCDate()
+  const hour = now.getUTCHours()
+  const minute = now.getUTCMinutes()
+  const second = now.getUTCSeconds()
+  
+  // Julian Day Number
+  const a = Math.floor((14 - month) / 12)
+  const y = year + 4800 - a
+  const m = month + 12 * a - 3
+  
+  const JDN = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045
+  const JD = JDN + (hour - 12) / 24 + minute / 1440 + second / 86400
+  
+  // Julian centuries from J2000.0
+  const T = (JD - 2451545.0) / 36525
+  
+  // GMST in degrees (IAU 1982 model)
+  let GMST = 280.46061837 + 360.98564736629 * (JD - 2451545.0) + 0.000387933 * T * T - T * T * T / 38710000
+  
+  // Normalize to 0-360
+  GMST = GMST % 360
+  if (GMST < 0) GMST += 360
+  
+  // Convert to radians
+  return GMST * (Math.PI / 180)
+}
+
 export function Earth() {
   const meshRef = useRef<THREE.Mesh>(null)
   const { autoRotate, showEarthTexture } = useStore()
+  const gmstRef = useRef(calculateGMST())
 
   // Load NASA textures
   const [earthTexture, nightTexture, bumpTexture] = useLoader(THREE.TextureLoader, [
@@ -59,9 +97,24 @@ export function Earth() {
     })
   }, [])
 
+  // Update GMST periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      gmstRef.current = calculateGMST()
+    }, 1000) // Update every second
+    return () => clearInterval(interval)
+  }, [])
+
   useFrame((_, delta) => {
-    if (autoRotate && meshRef.current) {
-      meshRef.current.rotation.y += delta * 0.05
+    if (meshRef.current) {
+      if (autoRotate) {
+        // Smooth rotation for visual effect
+        meshRef.current.rotation.y += delta * 0.05
+      } else {
+        // Real Earth rotation based on GMST
+        // Offset by PI because texture's 0° is at center, not edge
+        meshRef.current.rotation.y = -gmstRef.current + Math.PI
+      }
     }
   })
 
