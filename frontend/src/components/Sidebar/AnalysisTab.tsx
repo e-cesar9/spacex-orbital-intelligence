@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { getAltitudeDistribution, getConstellationHealth, getCollisionAlerts } from '@/services/api'
-import { AlertTriangle, Shield, Layers, ChevronDown, ChevronUp } from 'lucide-react'
+import { getAltitudeDistribution, getConstellationHealth, getCollisionAlerts, getGroundStations, getGroundStationVisibility } from '@/services/api'
+import { AlertTriangle, Shield, Layers, ChevronDown, ChevronUp, Radio, Satellite } from 'lucide-react'
 import { useState } from 'react'
+import { useStore } from '@/stores/useStore'
 
 export function AnalysisTab() {
   return (
@@ -9,11 +10,100 @@ export function AnalysisTab() {
       {/* Constellation Health */}
       <ConstellationHealthCard />
       
+      {/* Ground Station Visibility */}
+      <GroundStationCard />
+      
       {/* Collision Alerts */}
       <CollisionAlertsCard />
       
       {/* Altitude Distribution */}
       <AltitudeDistributionCard />
+    </div>
+  )
+}
+
+function GroundStationCard() {
+  const [expanded, setExpanded] = useState(true)
+  const { selectedSatelliteId } = useStore()
+  
+  const { data: stations } = useQuery({
+    queryKey: ['ground-stations'],
+    queryFn: getGroundStations,
+    staleTime: 300000,
+  })
+  
+  const { data: visibility, isLoading: loadingVisibility } = useQuery({
+    queryKey: ['ground-station-visibility', selectedSatelliteId],
+    queryFn: () => getGroundStationVisibility(selectedSatelliteId!),
+    enabled: !!selectedSatelliteId,
+    refetchInterval: 30000, // Refresh every 30s
+  })
+
+  return (
+    <div className="bg-spacex-dark rounded-lg overflow-hidden">
+      <button 
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between p-4 hover:bg-spacex-border/30 transition"
+      >
+        <div className="flex items-center gap-2">
+          <Radio size={16} className="text-cyan-400" />
+          <h3 className="font-medium">Ground Stations</h3>
+          {visibility && visibility.visible_count > 0 && (
+            <span className="px-1.5 py-0.5 text-xs bg-green-500/30 text-green-400 rounded">
+              {visibility.visible_count} in view
+            </span>
+          )}
+        </div>
+        {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </button>
+      
+      {expanded && (
+        <div className="px-4 pb-4">
+          {!selectedSatelliteId ? (
+            <div className="text-center py-4 text-gray-400 text-sm">
+              <Satellite className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              Select a satellite to see ground station visibility
+            </div>
+          ) : loadingVisibility ? (
+            <div className="animate-pulse h-20 bg-spacex-border rounded" />
+          ) : (
+            <div className="space-y-3">
+              {/* Current visibility */}
+              {visibility && (
+                <div className="text-xs text-gray-400 mb-2">
+                  Tracking: <span className="text-white font-mono">{visibility.name}</span>
+                </div>
+              )}
+              
+              {/* Station list */}
+              <div className="grid grid-cols-2 gap-2">
+                {stations?.stations.map(gs => {
+                  const isVisible = visibility?.visible_stations.some(v => v.name === gs.name)
+                  const visibleData = visibility?.visible_stations.find(v => v.name === gs.name)
+                  
+                  return (
+                    <div 
+                      key={gs.name}
+                      className={`p-2 rounded text-xs ${
+                        isVisible 
+                          ? 'bg-green-500/20 border border-green-500/30' 
+                          : 'bg-spacex-card opacity-50'
+                      }`}
+                    >
+                      <div className="font-medium truncate">{gs.name.split(' (')[0]}</div>
+                      {isVisible && visibleData && (
+                        <div className="text-green-400 mt-1">
+                          {visibleData.elevation_deg.toFixed(1)}° elevation
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

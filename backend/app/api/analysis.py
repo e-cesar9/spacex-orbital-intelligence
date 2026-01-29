@@ -5,6 +5,12 @@ from typing import Optional
 from app.services.orbital_engine import orbital_engine
 from app.services.tle_service import tle_service
 from app.services.cache import cache
+from app.services.conjunction_service import (
+    conjunction_service, 
+    get_visible_stations, 
+    get_next_passes,
+    GROUND_STATIONS
+)
 
 router = APIRouter(prefix="/analysis", tags=["Analysis"])
 
@@ -278,6 +284,139 @@ async def get_constellation_health():
     await cache.set(cache_key, result, ttl=300)
     
     return result
+
+
+@router.get("/conjunctions/cdm")
+async def get_cdm_conjunctions(
+    satellite_filter: str = Query("STARLINK", description="Satellite name pattern"),
+    hours_ahead: int = Query(72, ge=1, le=168),
+    limit: int = Query(50, ge=1, le=200)
+):
+    """
+    Get real Conjunction Data Messages (CDM) from Space-Track.
+    
+    CDM is the official format used by 18th Space Control Squadron
+    for conjunction assessments.
+    """
+    cache_key = f"cdm:conjunctions:{satellite_filter}:{hours_ahead}:{limit}"
+    
+    # Try cache
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+    
+    try:
+        alerts = await conjunction_service.get_cdm_alerts(
+            satellite_filter=satellite_filter,
+            hours_ahead=hours_ahead,
+            limit=limit
+        )
+        
+        result = {
+            "source": "space-track.org/cdm_public",
+            "satellite_filter": satellite_filter,
+            "hours_ahead": hours_ahead,
+            "alert_count": len(alerts),
+            "alerts": alerts
+        }
+        
+        # Cache for 10 minutes
+        await cache.set(cache_key, result, ttl=600)
+        
+        return result
+        
+    except Exception as e:
+        return {
+            "source": "space-track.org/cdm_public",
+            "error": str(e),
+            "alert_count": 0,
+            "alerts": []
+        }
+
+
+@router.get("/conjunctions/calculate")
+async def calculate_conjunction(
+    sat1_id: str = Query(..., description="First satellite NORAD ID"),
+    sat2_id: str = Query(..., description="Second satellite NORAD ID"),
+    hours_ahead: int = Query(24, ge=1, le=72)
+):
+    """
+    Calculate Time of Closest Approach (TCA) between two satellites using SGP4.
+    
+    This uses orbital propagation to find when two objects will be closest.
+    """
+    await tle_service.ensure_data_loaded()
+    
+    result = conjunction_service.calculate_tca_sgp4(
+        sat1_id, sat2_id, hours_ahead
+    )
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Could not calculate conjunction - satellites not found")
+    
+    return result
+
+
+@router.get("/ground-stations")
+async def list_ground_stations():
+    """List all tracked ground stations."""
+    return {
+        "count": len(GROUND_STATIONS),
+        "stations": [
+            {
+                "name": gs["name"],
+                "latitude": gs["lat"],
+                "longitude": gs["lon"],
+                "min_elevation_deg": gs["min_elevation"]
+            }
+            for gs in GROUND_STATIONS
+        ]
+    }
+
+
+@router.get("/ground-stations/visibility/{satellite_id}")
+async def get_ground_station_visibility(satellite_id: str):
+    """Get which ground stations can currently see a satellite."""
+    await tle_service.ensure_data_loaded()
+    
+    pos = orbital_engine.propagate(satellite_id)
+    if not pos:
+        raise HTTPException(status_code=404, detail="Satellite not found")
+    
+    visible = get_visible_stations(pos.latitude, pos.longitude, pos.altitude)
+    
+    return {
+        "satellite_id": satellite_id,
+        "name": tle_service.get_satellite_name(satellite_id),
+        "position": {
+            "latitude": pos.latitude,
+            "longitude": pos.longitude,
+            "altitude_km": pos.altitude
+        },
+        "visible_stations": visible,
+        "visible_count": len(visible)
+    }
+
+
+@router.get("/ground-stations/passes/{satellite_id}")
+async def get_satellite_passes(
+    satellite_id: str,
+    station: str = Query(..., description="Ground station name"),
+    hours_ahead: int = Query(24, ge=1, le=72)
+):
+    """Calculate upcoming passes of a satellite over a ground station."""
+    await tle_service.ensure_data_loaded()
+    
+    passes = get_next_passes(satellite_id, station, hours_ahead)
+    
+    return {
+        "satellite_id": satellite_id,
+        "name": tle_service.get_satellite_name(satellite_id),
+        "station": station,
+        "hours_ahead": hours_ahead,
+        "pass_count": len(passes),
+        "passes": passes
+    }
 
 
 @router.get("/alerts")

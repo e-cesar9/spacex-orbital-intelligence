@@ -132,6 +132,15 @@ class OrbitalEngine:
             velocity=vel_mag
         )
     
+    def propagate_at_time(
+        self,
+        satellite_id: str,
+        seconds_offset: int
+    ) -> Optional[SatellitePosition]:
+        """Propagate satellite position to a time offset from now."""
+        dt = datetime.utcnow() + timedelta(seconds=seconds_offset)
+        return self.propagate(satellite_id, dt)
+    
     def propagate_orbit(
         self,
         satellite_id: str,

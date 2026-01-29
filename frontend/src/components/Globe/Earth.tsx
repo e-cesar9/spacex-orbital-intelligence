@@ -154,13 +154,25 @@ function CoordinateGrid({ radius }: { radius: number }) {
   return <primitive object={lines} />
 }
 
-// Major ground stations / SpaceX facilities
-const LANDMARKS = [
+// Ground stations for satellite communication
+const GROUND_STATIONS = [
+  { name: 'Svalbard', lat: 78.23, lon: 15.39, color: 0x06b6d4 },
+  { name: 'Alaska', lat: 64.86, lon: -147.85, color: 0x06b6d4 },
+  { name: 'McMurdo', lat: -77.85, lon: 166.67, color: 0x06b6d4 },
+  { name: 'Punta Arenas', lat: -53.16, lon: -70.91, color: 0x06b6d4 },
+  { name: 'Hawaii', lat: 20.71, lon: -156.26, color: 0x06b6d4 },
+  { name: 'Guam', lat: 13.44, lon: 144.79, color: 0x06b6d4 },
+]
+
+// SpaceX facilities
+const SPACEX_FACILITIES = [
   { name: 'Cape Canaveral', lat: 28.5, lon: -80.6, color: 0x22c55e },
   { name: 'Vandenberg', lat: 34.7, lon: -120.5, color: 0x22c55e },
   { name: 'Starbase', lat: 25.99, lon: -97.15, color: 0xf59e0b },
   { name: 'SpaceX HQ', lat: 33.92, lon: -118.33, color: 0x3b82f6 },
 ]
+
+const LANDMARKS = [...GROUND_STATIONS, ...SPACEX_FACILITIES]
 
 function LandmarkMarkers({ radius }: { radius: number }) {
   return (

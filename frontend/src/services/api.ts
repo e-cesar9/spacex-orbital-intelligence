@@ -109,6 +109,51 @@ export async function getCollisionAlerts(minRisk = 0.3) {
   }>(`${API_BASE}/analysis/alerts?min_risk=${minRisk}`)
 }
 
+// CDM Conjunctions (real Space-Track data)
+export async function getCdmConjunctions(filter = 'STARLINK', hoursAhead = 72) {
+  return fetchJson<{
+    source: string
+    alert_count: number
+    alerts: {
+      cdm_id: string
+      tca: string
+      min_range_km: number
+      probability: number
+      satellite_1: { id: string; name: string; type: string }
+      satellite_2: { id: string; name: string; type: string }
+      emergency: boolean
+    }[]
+  }>(`${API_BASE}/analysis/conjunctions/cdm?satellite_filter=${filter}&hours_ahead=${hoursAhead}`)
+}
+
+// Ground Stations
+export async function getGroundStations() {
+  return fetchJson<{
+    count: number
+    stations: {
+      name: string
+      latitude: number
+      longitude: number
+      min_elevation_deg: number
+    }[]
+  }>(`${API_BASE}/analysis/ground-stations`)
+}
+
+export async function getGroundStationVisibility(satelliteId: string) {
+  return fetchJson<{
+    satellite_id: string
+    name: string
+    position: { latitude: number; longitude: number; altitude_km: number }
+    visible_stations: {
+      name: string
+      latitude: number
+      longitude: number
+      elevation_deg: number
+    }[]
+    visible_count: number
+  }>(`${API_BASE}/analysis/ground-stations/visibility/${satelliteId}`)
+}
+
 export async function simulateDeorbit(id: string, deltaV = 0.1) {
   const response = await fetch(
     `${API_BASE}/analysis/simulate/deorbit?satellite_id=${id}&delta_v=${deltaV}`,
