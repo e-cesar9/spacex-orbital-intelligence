@@ -130,23 +130,23 @@ export function SelectedSatelliteHighlight() {
         <meshBasicMaterial color={0xff4444} transparent opacity={0.9} side={THREE.DoubleSide} />
       </mesh>
       
-      {/* Beacon beam to Earth surface (red, downward) */}
+      {/* Beacon beam to Earth surface (red, downward) - LARGER */}
       <mesh 
         position={dir.clone().multiplyScalar(-alt * SCALE_FACTOR * 0.0005)}
         rotation={[Math.PI / 2, 0, 0]}
       >
-        <cylinderGeometry args={[0.002, 0.015, alt * SCALE_FACTOR * 0.001, 8]} />
-        <meshBasicMaterial color={0xff4444} transparent opacity={0.3} />
+        <cylinderGeometry args={[0.008, 0.04, alt * SCALE_FACTOR * 0.001, 12]} />
+        <meshBasicMaterial color={0xff4444} transparent opacity={0.4} />
       </mesh>
       
-      {/* Space beacon line (gray/white, upward to infinity) */}
+      {/* Space beacon line (gray/white, upward to infinity) - LARGER */}
       <mesh 
         ref={beamRef}
-        position={dir.clone().multiplyScalar(0.5)}
+        position={dir.clone().multiplyScalar(0.8)}
         rotation={[Math.PI / 2, 0, 0]}
       >
-        <cylinderGeometry args={[0.003, 0.001, 1.0, 4]} />
-        <meshBasicMaterial color={0xcccccc} transparent opacity={0.5} />
+        <cylinderGeometry args={[0.01, 0.003, 1.5, 6]} />
+        <meshBasicMaterial color={0xcccccc} transparent opacity={0.6} />
       </mesh>
       
       {/* Outer glow sphere */}

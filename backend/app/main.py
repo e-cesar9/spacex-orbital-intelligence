@@ -11,7 +11,7 @@ from app.core.config import get_settings
 from app.services.cache import cache
 from app.services.tle_service import tle_service
 from app.services.spacex_api import spacex_client
-from app.api import satellites, analysis, launches, websocket, ops
+from app.api import satellites, analysis, launches, websocket, ops, analytics, launches_live
 
 # Configure logging
 structlog.configure(
@@ -140,6 +140,8 @@ app.include_router(satellites.router, prefix=settings.api_prefix)
 app.include_router(analysis.router, prefix=settings.api_prefix)
 app.include_router(launches.router, prefix=settings.api_prefix)
 app.include_router(ops.router, prefix=settings.api_prefix)
+app.include_router(analytics.router, prefix=settings.api_prefix)
+app.include_router(launches_live.router, prefix=settings.api_prefix)
 app.include_router(websocket.router)
 
 

@@ -34,21 +34,22 @@ export function SatellitesTab() {
       <div className="space-y-3">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search satellites..."
-            className="w-full pl-9 pr-4 py-2 bg-spacex-dark rounded-lg border border-spacex-border focus:border-spacex-accent focus:outline-none text-sm"
+            className="w-full pl-4 pr-9 py-2 bg-spacex-dark rounded-lg border border-spacex-border focus:border-spacex-accent focus:outline-none text-sm"
           />
-          {searchQuery && (
+          {searchQuery ? (
             <button 
               onClick={() => setSearchQuery('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
             >
               <X size={14} />
             </button>
+          ) : (
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           )}
         </div>
 

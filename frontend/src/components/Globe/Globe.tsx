@@ -113,55 +113,61 @@ function GlobeOverlay() {
         </button>
       </div>
 
-      {/* Stats overlay */}
+      {/* Stats overlay - Left side */}
       <div className="absolute bottom-4 left-4 glass rounded-xl p-4">
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        {/* Altitude Legend - Above stats */}
+        <div className="mb-3 pb-3 border-b border-white/10">
+          <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Altitude Legend</div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-500" />
+              <span className="text-gray-400">&lt;400km</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="text-gray-400">400-600</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-yellow-500" />
+              <span className="text-gray-400">600-800</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="text-gray-400">&gt;800km</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Stats */}
+        <div className="flex items-end gap-6">
           <div>
-            <div className="text-gray-400 text-xs">Satellites</div>
-            <div className="text-2xl font-bold text-blue-400">
+            <div className="text-[10px] text-gray-500 uppercase tracking-wider">Satellites</div>
+            <div className="text-xl font-bold text-blue-400 font-mono">
               {stats.totalSatellites.toLocaleString()}
             </div>
           </div>
           <div>
-            <div className="text-gray-400 text-xs">Avg Altitude</div>
-            <div className="text-2xl font-bold text-green-400">
-              {stats.averageAltitude} km
+            <div className="text-[10px] text-gray-500 uppercase tracking-wider">Avg Alt</div>
+            <div className="text-lg font-bold text-green-400 font-mono">
+              {stats.averageAltitude}<span className="text-xs text-gray-500 ml-0.5">km</span>
+            </div>
+            <div className="text-[10px] text-gray-500">
+              ≈{(stats.averageAltitude / 420 * 100).toFixed(0)}% ISS
             </div>
           </div>
         </div>
         {lastUpdate && (
-          <div className="text-xs text-gray-500 mt-2">
-            Updated: {lastUpdate.toLocaleTimeString()}
+          <div className="text-[10px] text-gray-600 mt-2 font-mono">
+            {lastUpdate.toLocaleTimeString()}
           </div>
         )}
       </div>
 
-      {/* Legend */}
-      <div className="absolute bottom-4 right-4 glass rounded-xl p-3">
-        <div className="text-xs text-gray-400 mb-2 font-medium">Altitude Legend</div>
-        <div className="flex flex-col gap-1.5 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]" />
-            <span className="text-gray-300">&lt; 400 km <span className="text-gray-500">(Low LEO)</span></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.5)]" />
-            <span className="text-gray-300">400-600 km <span className="text-gray-500">(Starlink)</span></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-yellow-500 shadow-[0_0_6px_rgba(234,179,8,0.5)]" />
-            <span className="text-gray-300">600-800 km <span className="text-gray-500">(High LEO)</span></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]" />
-            <span className="text-gray-300">&gt; 800 km <span className="text-gray-500">(Upper)</span></span>
-          </div>
-        </div>
-        <div className="mt-2 pt-2 border-t border-white/10">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="w-3 h-3 rounded-full bg-red-400 ring-2 ring-red-400/50" />
-            <span className="text-gray-300">Selected</span>
-          </div>
+      {/* Selected indicator - Right side */}
+      <div className="absolute bottom-4 right-4 glass rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="w-2.5 h-2.5 rounded-full bg-red-400 ring-2 ring-red-400/50 animate-pulse" />
+          <span className="text-gray-400">Selected</span>
         </div>
       </div>
     </>

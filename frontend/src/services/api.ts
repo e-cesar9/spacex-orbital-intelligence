@@ -203,3 +203,79 @@ export async function getHealth() {
     last_tle_update: string | null
   }>('/health')
 }
+
+// Live Launches (Launch Library 2 - CURRENT DATA)
+export async function getLiveLaunches(limit = 20, upcoming = true, spacexOnly = false) {
+  return fetchJson<{
+    source: string
+    updated_at: string
+    type: string
+    spacex_only: boolean
+    count: number
+    launches: {
+      id: string
+      name: string
+      status: string
+      date_utc: string
+      rocket: { name: string; family: string }
+      pad: { name: string; location: string; latitude: string; longitude: string }
+      mission: { name: string; type: string; description: string }
+      webcast: string | null
+      image: string | null
+      agency: string
+    }[]
+  }>(`${API_BASE}/launches-live?limit=${limit}&upcoming=${upcoming}&spacex_only=${spacexOnly}`)
+}
+
+export async function getNextLaunch(spacexOnly = false) {
+  return fetchJson<{
+    source: string
+    launch: {
+      id: string
+      name: string
+      status: string
+      date_utc: string
+      rocket: { name: string; family: string }
+      pad: { name: string; location: string }
+      mission: { name: string; type: string; description: string }
+      webcast: string | null
+      image: string | null
+      agency: string
+    }
+    countdown: {
+      days: number
+      hours: number
+      minutes: number
+      total_seconds: number
+    }
+    is_spacex: boolean
+  }>(`${API_BASE}/launches-live/next?spacex_only=${spacexOnly}`)
+}
+
+export async function getLiveStatistics() {
+  return fetchJson<{
+    source: string
+    updated_at: string
+    spacex: {
+      recent_launches: number
+      upcoming_launches: number
+      success_rate: number
+      market_share_pct: number
+      mission_types: Record<string, number>
+    }
+    global: {
+      recent_launches: number
+      agencies: number
+    }
+    next_spacex: any
+  }>(`${API_BASE}/launches-live/statistics`)
+}
+
+export async function compareDataSources() {
+  return fetchJson<{
+    spacex_api: { latest_launch: string; status: string; note: string }
+    launch_library_2: { latest_launch: string; status: string; note: string }
+    recommendation: string
+    data_gap_days: number
+  }>(`${API_BASE}/launches-live/compare`)
+}

@@ -17,7 +17,7 @@ interface ViewState {
   
   // UI state
   sidebarOpen: boolean
-  activeTab: 'satellites' | 'ops' | 'analysis' | 'launches' | 'simulation'
+  activeTab: 'satellites' | 'ops' | 'insights' | 'analysis' | 'launches' | 'simulation'
   
   // Real-time data
   satellites: SatellitePosition[]
