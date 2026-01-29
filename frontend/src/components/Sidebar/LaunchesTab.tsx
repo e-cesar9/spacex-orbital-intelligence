@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getLaunches, getCores, getFleetStats } from '@/services/api'
-import { RotateCcw, CheckCircle, XCircle, Clock, ExternalLink } from 'lucide-react'
+import { RotateCcw, CheckCircle, XCircle, Clock, ExternalLink, Video } from 'lucide-react'
 
 export function LaunchesTab() {
   const [showUpcoming, setShowUpcoming] = useState(false)
+  const [videoOnly, setVideoOnly] = useState(false)
 
   return (
     <div className="space-y-6">
@@ -14,28 +15,41 @@ export function LaunchesTab() {
       {/* Reusable Cores */}
       <CoresCard />
 
-      {/* Launch toggle */}
-      <div className="flex gap-2">
+      {/* Launch toggle + filters */}
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowUpcoming(false)}
+            className={`flex-1 py-2 text-sm rounded-lg transition ${
+              !showUpcoming ? 'bg-spacex-accent text-white' : 'bg-spacex-dark text-gray-400'
+            }`}
+          >
+            Past Launches
+          </button>
+          <button
+            onClick={() => setShowUpcoming(true)}
+            className={`flex-1 py-2 text-sm rounded-lg transition ${
+              showUpcoming ? 'bg-spacex-accent text-white' : 'bg-spacex-dark text-gray-400'
+            }`}
+          >
+            Upcoming
+          </button>
+        </div>
+        
+        {/* Video filter */}
         <button
-          onClick={() => setShowUpcoming(false)}
-          className={`flex-1 py-2 text-sm rounded-lg transition ${
-            !showUpcoming ? 'bg-spacex-accent text-white' : 'bg-spacex-dark text-gray-400'
+          onClick={() => setVideoOnly(!videoOnly)}
+          className={`w-full flex items-center justify-center gap-2 py-1.5 text-xs rounded-lg transition ${
+            videoOnly ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50' : 'bg-spacex-dark text-gray-400'
           }`}
         >
-          Past Launches
-        </button>
-        <button
-          onClick={() => setShowUpcoming(true)}
-          className={`flex-1 py-2 text-sm rounded-lg transition ${
-            showUpcoming ? 'bg-spacex-accent text-white' : 'bg-spacex-dark text-gray-400'
-          }`}
-        >
-          Upcoming
+          <Video size={14} />
+          {videoOnly ? 'Showing with video only' : 'Filter: with video'}
         </button>
       </div>
 
       {/* Launches list */}
-      <LaunchesCard upcoming={showUpcoming} />
+      <LaunchesCard upcoming={showUpcoming} videoOnly={videoOnly} />
     </div>
   )
 }
@@ -125,12 +139,23 @@ function CoresCard() {
   )
 }
 
-function LaunchesCard({ upcoming }: { upcoming: boolean }) {
+function LaunchesCard({ upcoming, videoOnly }: { upcoming: boolean; videoOnly: boolean }) {
   const { data, isLoading } = useQuery({
     queryKey: ['launches', upcoming],
-    queryFn: () => getLaunches(15, upcoming),
+    queryFn: () => getLaunches(30, upcoming),
     staleTime: 60000,
   })
+
+  // Filter and sort launches
+  const filteredLaunches = data?.launches
+    ?.filter(launch => !videoOnly || launch.webcast)
+    ?.sort((a, b) => {
+      // For upcoming: ascending (soonest first)
+      // For past: descending (most recent first)
+      const dateA = new Date(a.date_utc).getTime()
+      const dateB = new Date(b.date_utc).getTime()
+      return upcoming ? dateA - dateB : dateB - dateA
+    }) || []
 
   if (isLoading) {
     return (
@@ -145,9 +170,17 @@ function LaunchesCard({ upcoming }: { upcoming: boolean }) {
     )
   }
 
+  if (filteredLaunches.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-400 text-sm">
+        {videoOnly ? 'No launches with video' : 'No launches found'}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-2">
-      {data?.launches.map(launch => (
+      {filteredLaunches.map(launch => (
         <div 
           key={launch.id}
           className="bg-spacex-dark rounded-lg p-3 hover:bg-spacex-border/50 transition"

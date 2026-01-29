@@ -83,38 +83,77 @@ export function Satellites({ positions }: SatellitesProps) {
   )
 }
 
-// Selected satellite highlight
+// Selected satellite highlight with beacon beam
 export function SelectedSatelliteHighlight() {
-  const { selectedSatellite } = useStore()
+  const { selectedSatellite, satellites, selectedSatelliteId } = useStore()
   const ringRef = useRef<THREE.Mesh>(null)
+  const beamRef = useRef<THREE.Mesh>(null)
 
   useFrame((_, delta) => {
     if (ringRef.current) {
       ringRef.current.rotation.z += delta * 2
     }
+    if (beamRef.current) {
+      // Pulse the beam
+      const scale = 1 + Math.sin(Date.now() * 0.005) * 0.1
+      beamRef.current.scale.y = scale
+    }
   })
 
-  if (!selectedSatellite) return null
+  // Get position from satellites array if no detail loaded yet
+  const satPos = selectedSatellite?.geographic || 
+    (selectedSatelliteId ? satellites.find(s => s.id === selectedSatelliteId) : null)
 
-  const { latitude, longitude, altitude } = selectedSatellite.geographic
-  const phi = (90 - latitude) * (Math.PI / 180)
-  const theta = (longitude + 180) * (Math.PI / 180)
-  const r = EARTH_RADIUS + altitude * SCALE_FACTOR * 0.001
+  if (!satPos) return null
+
+  const lat = 'latitude' in satPos ? satPos.latitude : satPos.lat
+  const lon = 'longitude' in satPos ? satPos.longitude : satPos.lon
+  const alt = 'altitude' in satPos ? satPos.altitude : satPos.alt
+
+  const phi = (90 - lat) * (Math.PI / 180)
+  const theta = (lon + 180) * (Math.PI / 180)
+  const r = EARTH_RADIUS + alt * SCALE_FACTOR * 0.001
 
   const x = -r * Math.sin(phi) * Math.cos(theta)
   const y = r * Math.cos(phi)
   const z = r * Math.sin(phi) * Math.sin(theta)
 
+  // Calculate direction to Earth center for beam
+  const pos = new THREE.Vector3(x, y, z)
+  const dir = pos.clone().normalize()
+
   return (
     <group position={[x, y, z]}>
       {/* Pulsing ring */}
       <mesh ref={ringRef}>
-        <ringGeometry args={[0.04, 0.05, 32]} />
-        <meshBasicMaterial color={0xff6b6b} transparent opacity={0.8} side={THREE.DoubleSide} />
+        <ringGeometry args={[0.06, 0.08, 32]} />
+        <meshBasicMaterial color={0xff4444} transparent opacity={0.9} side={THREE.DoubleSide} />
       </mesh>
       
-      {/* Glow */}
-      <pointLight color={0xff6b6b} intensity={0.5} distance={0.5} />
+      {/* Beacon beam to Earth surface */}
+      <mesh 
+        ref={beamRef}
+        position={dir.clone().multiplyScalar(-alt * SCALE_FACTOR * 0.0005)}
+        rotation={[Math.PI / 2, 0, 0]}
+      >
+        <cylinderGeometry args={[0.002, 0.02, alt * SCALE_FACTOR * 0.001, 8]} />
+        <meshBasicMaterial color={0xff4444} transparent opacity={0.4} />
+      </mesh>
+      
+      {/* Outer glow sphere */}
+      <mesh>
+        <sphereGeometry args={[0.05, 16, 16]} />
+        <meshBasicMaterial color={0xff4444} transparent opacity={0.3} />
+      </mesh>
+      
+      {/* Bright center point */}
+      <mesh>
+        <sphereGeometry args={[0.025, 8, 8]} />
+        <meshBasicMaterial color={0xffffff} />
+      </mesh>
+      
+      {/* Point light */}
+      <pointLight color={0xff4444} intensity={1} distance={1} />
     </group>
   )
 }
