@@ -84,9 +84,9 @@ async def get_fleet_statistics():
     success_rate = len(successful) / len(completed) * 100 if completed else 0
     
     # Recent launches (last 30 days)
-    from datetime import datetime, timedelta
-    cutoff = datetime.utcnow() - timedelta(days=30)
-    recent = [l for l in launches if l.date_utc > cutoff]
+    from datetime import datetime, timedelta, timezone
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    recent = [l for l in launches if l.date_utc.replace(tzinfo=timezone.utc) > cutoff]
     
     result = {
         **stats,

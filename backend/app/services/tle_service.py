@@ -46,15 +46,15 @@ class TLEService:
         return False
     
     async def fetch_tle_data(self, source: str = "starlink") -> dict[str, tuple[str, str, str]]:
-        """Fetch TLE data from Space-Track.org."""
+        """Fetch TLE data from Space-Track.org using JSON format for names."""
         
-        # Build query based on source
+        # Build query based on source - use JSON format to get names
         if source == "starlink":
-            query = f"{self.SPACETRACK_BASE}/class/gp/OBJECT_NAME/~~STARLINK/orderby/NORAD_CAT_ID/format/tle"
+            query = f"{self.SPACETRACK_BASE}/class/gp/OBJECT_NAME/~~STARLINK/orderby/NORAD_CAT_ID/format/json"
         elif source == "stations":
-            query = f"{self.SPACETRACK_BASE}/class/gp/OBJECT_TYPE/PAYLOAD/PERIOD/90--95/ECCENTRICITY/<0.01/orderby/NORAD_CAT_ID/limit/100/format/tle"
+            query = f"{self.SPACETRACK_BASE}/class/gp/OBJECT_TYPE/PAYLOAD/PERIOD/90--95/ECCENTRICITY/<0.01/orderby/NORAD_CAT_ID/limit/100/format/json"
         else:
-            query = f"{self.SPACETRACK_BASE}/class/gp/OBJECT_TYPE/PAYLOAD/DECAY/null-val/orderby/NORAD_CAT_ID/limit/1000/format/tle"
+            query = f"{self.SPACETRACK_BASE}/class/gp/OBJECT_TYPE/PAYLOAD/DECAY/null-val/orderby/NORAD_CAT_ID/limit/1000/format/json"
         
         async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
             # Authenticate first
@@ -66,11 +66,29 @@ class TLEService:
             response = await client.get(query)
             response.raise_for_status()
             
-            tle_text = response.text
-            return self._parse_tle(tle_text)
+            data = response.json()
+            return self._parse_json_tle(data)
+    
+    def _parse_json_tle(self, data: list) -> dict[str, tuple[str, str, str]]:
+        """Parse JSON format TLE data from Space-Track."""
+        result = {}
+        
+        for item in data:
+            try:
+                norad_id = str(item.get("NORAD_CAT_ID", "")).strip()
+                name = item.get("OBJECT_NAME", f"SAT-{norad_id}")
+                line1 = item.get("TLE_LINE1", "")
+                line2 = item.get("TLE_LINE2", "")
+                
+                if norad_id and line1 and line2:
+                    result[norad_id] = (name, line1, line2)
+            except Exception:
+                pass
+        
+        return result
     
     def _parse_tle(self, tle_text: str) -> dict[str, tuple[str, str, str]]:
-        """Parse TLE format text into structured data."""
+        """Parse TLE format text into structured data (3-line format)."""
         lines = [l.strip() for l in tle_text.strip().split('\n') if l.strip()]
         result = {}
         
