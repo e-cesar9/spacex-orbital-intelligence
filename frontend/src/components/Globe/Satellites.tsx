@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { useFrame, ThreeEvent } from '@react-three/fiber'
+// useFrame still used in Satellites component
 import * as THREE from 'three'
 import { useStore } from '@/stores/useStore'
 import type { SatellitePosition } from '@/types'
@@ -83,22 +84,9 @@ export function Satellites({ positions }: SatellitesProps) {
   )
 }
 
-// Selected satellite highlight with beacon beam
+// Selected satellite highlight - simple red dot
 export function SelectedSatelliteHighlight() {
   const { selectedSatellite, satellites, selectedSatelliteId } = useStore()
-  const ringRef = useRef<THREE.Mesh>(null)
-  const beamRef = useRef<THREE.Mesh>(null)
-
-  useFrame((_, delta) => {
-    if (ringRef.current) {
-      ringRef.current.rotation.z += delta * 2
-    }
-    if (beamRef.current) {
-      // Pulse the beam
-      const scale = 1 + Math.sin(Date.now() * 0.005) * 0.1
-      beamRef.current.scale.y = scale
-    }
-  })
 
   // Get position from satellites array if no detail loaded yet
   const satPos = selectedSatellite?.geographic || 
@@ -118,51 +106,13 @@ export function SelectedSatelliteHighlight() {
   const y = r * Math.cos(phi)
   const z = r * Math.sin(phi) * Math.sin(theta)
 
-  // Calculate direction to Earth center for beam
-  const pos = new THREE.Vector3(x, y, z)
-  const dir = pos.clone().normalize()
-
   return (
     <group position={[x, y, z]}>
-      {/* Pulsing ring */}
-      <mesh ref={ringRef}>
-        <ringGeometry args={[0.06, 0.08, 32]} />
-        <meshBasicMaterial color={0xff4444} transparent opacity={0.9} side={THREE.DoubleSide} />
-      </mesh>
-      
-      {/* Beacon beam to Earth surface (red, downward) - LARGER */}
-      <mesh 
-        position={dir.clone().multiplyScalar(-alt * SCALE_FACTOR * 0.0005)}
-        rotation={[Math.PI / 2, 0, 0]}
-      >
-        <cylinderGeometry args={[0.008, 0.04, alt * SCALE_FACTOR * 0.001, 12]} />
-        <meshBasicMaterial color={0xff4444} transparent opacity={0.4} />
-      </mesh>
-      
-      {/* Space beacon line (gray/white, upward to infinity) - LARGER */}
-      <mesh 
-        ref={beamRef}
-        position={dir.clone().multiplyScalar(0.8)}
-        rotation={[Math.PI / 2, 0, 0]}
-      >
-        <cylinderGeometry args={[0.01, 0.003, 1.5, 6]} />
-        <meshBasicMaterial color={0xcccccc} transparent opacity={0.6} />
-      </mesh>
-      
-      {/* Outer glow sphere */}
+      {/* Red dot */}
       <mesh>
-        <sphereGeometry args={[0.05, 16, 16]} />
-        <meshBasicMaterial color={0xff4444} transparent opacity={0.3} />
+        <sphereGeometry args={[0.03, 16, 16]} />
+        <meshBasicMaterial color={0xff4444} />
       </mesh>
-      
-      {/* Bright center point */}
-      <mesh>
-        <sphereGeometry args={[0.025, 8, 8]} />
-        <meshBasicMaterial color={0xffffff} />
-      </mesh>
-      
-      {/* Point light */}
-      <pointLight color={0xff4444} intensity={1} distance={1} />
     </group>
   )
 }
