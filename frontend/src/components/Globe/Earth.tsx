@@ -13,7 +13,7 @@ const EARTH_BUMP_URL = 'https://unpkg.com/three-globe@2.31.1/example/img/earth-t
 
 export function Earth() {
   const meshRef = useRef<THREE.Mesh>(null)
-  const { autoRotate } = useStore()
+  const { autoRotate, showEarthTexture } = useStore()
 
   // Load NASA textures
   const [earthTexture, nightTexture, bumpTexture] = useLoader(THREE.TextureLoader, [
@@ -67,15 +67,23 @@ export function Earth() {
 
   return (
     <group>
-      {/* Earth with NASA texture */}
+      {/* Earth with NASA texture or solid color */}
       <Sphere ref={meshRef} args={[EARTH_RADIUS, 64, 64]}>
-        <meshStandardMaterial
-          map={earthTexture}
-          bumpMap={bumpTexture}
-          bumpScale={0.05}
-          roughness={0.8}
-          metalness={0.1}
-        />
+        {showEarthTexture ? (
+          <meshStandardMaterial
+            map={earthTexture}
+            bumpMap={bumpTexture}
+            bumpScale={0.05}
+            roughness={0.8}
+            metalness={0.1}
+          />
+        ) : (
+          <meshStandardMaterial
+            color={0x1a2744}
+            roughness={0.9}
+            metalness={0.1}
+          />
+        )}
       </Sphere>
 
       {/* Coordinate grid overlay */}

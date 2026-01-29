@@ -419,6 +419,200 @@ async def get_satellite_passes(
     }
 
 
+@router.get("/eclipse/{satellite_id}")
+async def predict_eclipse(
+    satellite_id: str,
+    hours_ahead: int = Query(24, ge=1, le=72)
+):
+    """
+    Predict eclipse periods for a satellite (when it's in Earth's shadow).
+    
+    Important for:
+    - Solar panel operations
+    - Thermal management
+    - Battery planning
+    """
+    await tle_service.ensure_data_loaded()
+    
+    pos = orbital_engine.propagate(satellite_id)
+    if not pos:
+        raise HTTPException(status_code=404, detail="Satellite not found")
+    
+    import math
+    from datetime import datetime, timedelta
+    
+    # Sun position (simplified - assumes sun at fixed position for demo)
+    # In production, use proper ephemeris (e.g., JPL DE430)
+    
+    EARTH_RADIUS = 6371  # km
+    
+    eclipses = []
+    in_eclipse = False
+    eclipse_start = None
+    
+    steps = hours_ahead * 12  # 5-minute steps
+    
+    for i in range(steps):
+        dt = datetime.utcnow() + timedelta(minutes=i * 5)
+        sat_pos = orbital_engine.propagate(satellite_id, dt)
+        
+        if not sat_pos:
+            continue
+        
+        # Simplified eclipse calculation
+        # Check if satellite is behind Earth relative to Sun
+        # Sun direction (simplified: assume sun at +X in ECI, varies with time of year)
+        
+        # Day of year affects sun position
+        day_of_year = dt.timetuple().tm_yday
+        sun_angle = (day_of_year / 365.25) * 2 * math.pi
+        
+        # Sun unit vector (simplified)
+        sun_x = math.cos(sun_angle)
+        sun_y = 0
+        sun_z = math.sin(sun_angle) * 0.4  # Account for ecliptic tilt
+        
+        # Satellite position
+        sat_x, sat_y, sat_z = sat_pos.x, sat_pos.y, sat_pos.z
+        sat_r = math.sqrt(sat_x**2 + sat_y**2 + sat_z**2)
+        
+        # Dot product to check if satellite is behind Earth
+        dot = (sat_x * sun_x + sat_y * sun_y + sat_z * sun_z) / sat_r
+        
+        # Check shadow cone
+        shadow_angle = math.asin(EARTH_RADIUS / sat_r)
+        is_eclipsed = dot < -math.cos(shadow_angle)
+        
+        if is_eclipsed and not in_eclipse:
+            in_eclipse = True
+            eclipse_start = dt
+        elif not is_eclipsed and in_eclipse:
+            in_eclipse = False
+            if eclipse_start:
+                duration = (dt - eclipse_start).seconds / 60
+                eclipses.append({
+                    "start": eclipse_start.isoformat(),
+                    "end": dt.isoformat(),
+                    "duration_minutes": round(duration, 1)
+                })
+    
+    # Calculate orbital period for context
+    altitude = pos.altitude
+    orbital_period = 2 * math.pi * math.sqrt((EARTH_RADIUS + altitude)**3 / 398600.4) / 60  # minutes
+    
+    return {
+        "satellite_id": satellite_id,
+        "name": tle_service.get_satellite_name(satellite_id),
+        "altitude_km": pos.altitude,
+        "orbital_period_minutes": round(orbital_period, 2),
+        "hours_ahead": hours_ahead,
+        "eclipse_count": len(eclipses),
+        "eclipses": eclipses,
+        "note": "Simplified model - production should use JPL ephemeris"
+    }
+
+
+@router.get("/link-budget/{satellite_id}")
+async def calculate_link_budget(
+    satellite_id: str,
+    ground_station: str = Query(..., description="Ground station name"),
+    frequency_ghz: float = Query(12.0, ge=1, le=30, description="Downlink frequency in GHz")
+):
+    """
+    Calculate link budget for satellite-to-ground communication.
+    
+    Provides:
+    - Free space path loss
+    - Elevation angle
+    - Estimated signal strength
+    """
+    await tle_service.ensure_data_loaded()
+    
+    pos = orbital_engine.propagate(satellite_id)
+    if not pos:
+        raise HTTPException(status_code=404, detail="Satellite not found")
+    
+    # Find ground station
+    station = next((gs for gs in GROUND_STATIONS if gs["name"] == ground_station), None)
+    if not station:
+        raise HTTPException(status_code=404, detail="Ground station not found")
+    
+    import math
+    
+    # Calculate slant range
+    EARTH_RADIUS = 6371
+    
+    # Elevation calculation
+    gs_lat = math.radians(station["lat"])
+    gs_lon = math.radians(station["lon"])
+    sat_lat = math.radians(pos.latitude)
+    sat_lon = math.radians(pos.longitude)
+    
+    # Ground distance
+    dlat = sat_lat - gs_lat
+    dlon = sat_lon - gs_lon
+    a = math.sin(dlat/2)**2 + math.cos(gs_lat) * math.cos(sat_lat) * math.sin(dlon/2)**2
+    central_angle = 2 * math.asin(min(1.0, math.sqrt(a)))
+    
+    # Slant range (km)
+    sat_r = EARTH_RADIUS + pos.altitude
+    slant_range = math.sqrt(EARTH_RADIUS**2 + sat_r**2 - 2*EARTH_RADIUS*sat_r*math.cos(central_angle))
+    
+    # Free Space Path Loss (dB)
+    # FSPL = 20*log10(d) + 20*log10(f) + 92.45 (d in km, f in GHz)
+    fspl = 20 * math.log10(slant_range) + 20 * math.log10(frequency_ghz) + 92.45
+    
+    # Elevation angle
+    elevation = math.degrees(math.asin((sat_r * math.cos(central_angle) - EARTH_RADIUS) / slant_range))
+    
+    # Atmospheric loss estimate (simplified)
+    if elevation > 10:
+        atm_loss = 0.5  # dB, minimal at high elevation
+    elif elevation > 5:
+        atm_loss = 1.5  # dB
+    else:
+        atm_loss = 3.0  # dB, significant at low elevation
+    
+    # Rain fade estimate (Ku-band)
+    rain_fade = 2.0 if frequency_ghz > 10 else 0.5  # dB, varies with weather
+    
+    # Typical Starlink parameters (estimated)
+    satellite_eirp = 40  # dBW
+    ground_antenna_gain = 35  # dBi
+    system_noise_temp = 25  # dB-K
+    
+    # Received power estimate
+    received_power = satellite_eirp + ground_antenna_gain - fspl - atm_loss - rain_fade
+    
+    # Link margin (simplified)
+    required_cnr = 10  # dB for typical modulation
+    link_margin = received_power - system_noise_temp - required_cnr
+    
+    return {
+        "satellite_id": satellite_id,
+        "name": tle_service.get_satellite_name(satellite_id),
+        "ground_station": ground_station,
+        "frequency_ghz": frequency_ghz,
+        "geometry": {
+            "slant_range_km": round(slant_range, 2),
+            "elevation_deg": round(elevation, 2),
+            "satellite_altitude_km": round(pos.altitude, 2)
+        },
+        "losses": {
+            "free_space_path_loss_db": round(fspl, 2),
+            "atmospheric_loss_db": atm_loss,
+            "rain_fade_db": rain_fade,
+            "total_loss_db": round(fspl + atm_loss + rain_fade, 2)
+        },
+        "link_performance": {
+            "received_power_dbw": round(received_power, 2),
+            "link_margin_db": round(link_margin, 2),
+            "link_status": "GOOD" if link_margin > 3 else "MARGINAL" if link_margin > 0 else "POOR"
+        },
+        "note": "Simplified model - actual values depend on weather, antenna, and satellite state"
+    }
+
+
 @router.get("/alerts")
 async def get_collision_alerts(
     min_risk: float = Query(0.3, ge=0, le=1.0),

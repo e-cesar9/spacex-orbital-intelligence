@@ -15,7 +15,9 @@ export function SatellitesTab() {
     showOrbits,
     setShowOrbits,
     autoRotate,
-    setAutoRotate
+    setAutoRotate,
+    showEarthTexture,
+    setShowEarthTexture
   } = useStore()
 
   // Filter satellites
@@ -85,6 +87,16 @@ export function SatellitesTab() {
             Show Orbits
           </button>
         </div>
+        
+        {/* Earth texture toggle */}
+        <button
+          onClick={() => setShowEarthTexture(!showEarthTexture)}
+          className={`w-full py-1.5 text-xs rounded-lg transition ${
+            showEarthTexture ? 'bg-cyan-600/30 text-cyan-300 border border-cyan-500/30' : 'bg-spacex-dark text-gray-400'
+          }`}
+        >
+          {showEarthTexture ? '🌍 NASA Texture' : '🔵 Minimal Globe'}
+        </button>
       </div>
 
       {/* Selected satellite details */}

@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useStore } from '@/stores/useStore'
 import { simulateDeorbit } from '@/services/api'
-import { PlayCircle, RotateCcw, AlertTriangle } from 'lucide-react'
+import { PlayCircle, RotateCcw, AlertTriangle, Sun, Radio } from 'lucide-react'
 
 export function SimulationTab() {
   const { selectedSatelliteId } = useStore()
@@ -24,16 +24,160 @@ export function SimulationTab() {
       {/* Deorbit Simulation */}
       <DeorbitSimulation satelliteId={selectedSatelliteId} />
 
-      {/* Coming Soon */}
-      <div className="bg-spacex-dark rounded-lg p-4 border border-dashed border-spacex-border">
-        <h3 className="font-medium mb-2">Coming Soon</h3>
-        <ul className="text-sm text-gray-400 space-y-1">
-          <li>• Multi-satellite collision simulation</li>
-          <li>• Constellation deployment planning</li>
-          <li>• Debris field propagation</li>
-          <li>• Maneuver optimization</li>
-        </ul>
+      {/* Eclipse Prediction */}
+      <EclipsePrediction satelliteId={selectedSatelliteId} />
+      
+      {/* Link Budget */}
+      <LinkBudgetCard satelliteId={selectedSatelliteId} />
+    </div>
+  )
+}
+
+function EclipsePrediction({ satelliteId }: { satelliteId: string | null }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['eclipse', satelliteId],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/analysis/eclipse/${satelliteId}?hours_ahead=24`)
+      return res.json()
+    },
+    enabled: !!satelliteId,
+    staleTime: 60000,
+  })
+
+  if (!satelliteId) {
+    return (
+      <div className="bg-spacex-dark rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Sun size={16} className="text-yellow-400" />
+          <h3 className="font-medium">Eclipse Prediction</h3>
+        </div>
+        <p className="text-sm text-gray-400">
+          Select a satellite to predict eclipse periods.
+        </p>
       </div>
+    )
+  }
+
+  return (
+    <div className="bg-spacex-dark rounded-lg p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Sun size={16} className="text-yellow-400" />
+        <h3 className="font-medium">Eclipse Prediction</h3>
+      </div>
+      
+      {isLoading ? (
+        <div className="animate-pulse h-16 bg-spacex-border rounded" />
+      ) : data?.eclipses?.length > 0 ? (
+        <div className="space-y-2">
+          <div className="text-xs text-gray-400">
+            {data.eclipse_count} eclipse(s) in next 24h
+          </div>
+          {data.eclipses.slice(0, 3).map((eclipse: any, i: number) => (
+            <div key={i} className="bg-spacex-card rounded p-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Start:</span>
+                <span>{new Date(eclipse.start).toLocaleTimeString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Duration:</span>
+                <span>{eclipse.duration_minutes} min</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-sm text-green-400">
+          ☀️ No eclipses predicted in next 24h
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LinkBudgetCard({ satelliteId }: { satelliteId: string | null }) {
+  const [station, setStation] = useState('Cape Canaveral')
+  
+  const { data, isLoading } = useQuery({
+    queryKey: ['link-budget', satelliteId, station],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/analysis/link-budget/${satelliteId}?ground_station=${encodeURIComponent(station)}`)
+      return res.json()
+    },
+    enabled: !!satelliteId,
+    staleTime: 30000,
+  })
+
+  if (!satelliteId) {
+    return (
+      <div className="bg-spacex-dark rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Radio size={16} className="text-cyan-400" />
+          <h3 className="font-medium">Link Budget</h3>
+        </div>
+        <p className="text-sm text-gray-400">
+          Select a satellite to calculate link budget.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-spacex-dark rounded-lg p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Radio size={16} className="text-cyan-400" />
+        <h3 className="font-medium">Link Budget</h3>
+      </div>
+      
+      <select
+        value={station}
+        onChange={(e) => setStation(e.target.value)}
+        className="w-full mb-3 bg-spacex-card border border-spacex-border rounded px-2 py-1.5 text-sm"
+      >
+        <option>Cape Canaveral</option>
+        <option>Vandenberg</option>
+        <option>Alaska (Fairbanks)</option>
+        <option>Hawaii (AMOS)</option>
+        <option>Svalbard (SvalSat)</option>
+      </select>
+      
+      {isLoading ? (
+        <div className="animate-pulse h-20 bg-spacex-border rounded" />
+      ) : data?.link_performance ? (
+        <div className="space-y-2 text-xs">
+          <div className="flex justify-between">
+            <span className="text-gray-400">Elevation</span>
+            <span>{data.geometry.elevation_deg.toFixed(1)}°</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Slant Range</span>
+            <span>{data.geometry.slant_range_km.toFixed(0)} km</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Path Loss</span>
+            <span>{data.losses.total_loss_db.toFixed(1)} dB</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400">Link Status</span>
+            <span className={`px-2 py-0.5 rounded text-xs ${
+              data.link_performance.link_status === 'GOOD' ? 'bg-green-500/20 text-green-400' :
+              data.link_performance.link_status === 'MARGINAL' ? 'bg-yellow-500/20 text-yellow-400' :
+              'bg-red-500/20 text-red-400'
+            }`}>
+              {data.link_performance.link_status}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Link Margin</span>
+            <span className={data.link_performance.link_margin_db > 0 ? 'text-green-400' : 'text-red-400'}>
+              {data.link_performance.link_margin_db.toFixed(1)} dB
+            </span>
+          </div>
+        </div>
+      ) : data?.detail ? (
+        <div className="text-sm text-red-400">{data.detail}</div>
+      ) : (
+        <div className="text-sm text-gray-400">No data available</div>
+      )}
     </div>
   )
 }

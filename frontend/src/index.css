@@ -2,13 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import D-DIN font (SpaceX-style) from Google Fonts alternative */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 :root {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
+  /* SpaceX-inspired font stack */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.4;
   font-weight: 400;
   color-scheme: dark;
-  background-color: #0a0a0a;
+  background-color: #000000;
   color: #ffffff;
+  
+  /* SpaceX color palette */
+  --spacex-black: #000000;
+  --spacex-dark: #0a0a0a;
+  --spacex-gray: #1a1a1a;
+  --spacex-border: #2a2a2a;
+  --spacex-blue: #005288;
+  --spacex-accent: #3b82f6;
+  --spacex-text: #e5e5e5;
+  --spacex-muted: #737373;
 }
 
 * {
@@ -20,55 +34,76 @@
 body {
   min-height: 100vh;
   overflow-x: hidden;
+  background: linear-gradient(180deg, #000000 0%, #0a0a12 100%);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar */
+/* Typography - SpaceX style */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* Monospace for data */
+.font-mono, code {
+  font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  font-size: 0.9em;
+}
+
+/* Custom scrollbar - minimal */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #141414;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3b82f6;
-  border-radius: 4px;
+  background: #333;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2563eb;
+  background: #444;
 }
 
-/* Glass effect */
+/* Glass effect - sharper */
 .glass {
-  background: rgba(20, 20, 20, 0.8);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(10, 10, 10, 0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Glow effects */
+/* Glow effects - subtle */
 .glow-blue {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
 }
 
 .glow-green {
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.15);
 }
 
 .glow-red {
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.15);
 }
 
 /* Animation classes */
 @keyframes satellite-blink {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50% { opacity: 0.6; }
 }
 
 .satellite-blink {
   animation: satellite-blink 2s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
 }
 
 /* Canvas container */
@@ -82,25 +117,86 @@ body {
   outline: none;
 }
 
-/* Stats cards */
+/* Stats cards - SpaceX style */
 .stat-card {
-  @apply glass rounded-xl p-4 transition-all duration-300;
+  @apply bg-[#0f0f0f] rounded-lg p-4 border border-[#1f1f1f] transition-all duration-200;
 }
 
 .stat-card:hover {
-  @apply glow-blue;
-  transform: translateY(-2px);
+  @apply border-[#333] bg-[#141414];
+}
+
+/* Buttons - sharp, minimal */
+button {
+  @apply font-medium tracking-wide transition-all duration-150;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Input fields */
+input[type="text"],
+input[type="search"] {
+  @apply bg-[#0f0f0f] border border-[#222] rounded-md px-3 py-2;
+  @apply focus:border-[#3b82f6] focus:outline-none focus:ring-1 focus:ring-[#3b82f6]/30;
+}
+
+/* Range sliders */
+input[type="range"] {
+  @apply h-1 bg-[#222] rounded-full appearance-none cursor-pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  @apply w-3 h-3 bg-white rounded-full appearance-none cursor-pointer;
+  @apply hover:bg-[#3b82f6] transition-colors;
 }
 
 /* Risk indicators */
 .risk-high {
-  @apply bg-red-500/20 text-red-400 border-red-500/30;
+  @apply bg-red-500/10 text-red-400 border border-red-500/20;
 }
 
 .risk-medium {
-  @apply bg-yellow-500/20 text-yellow-400 border-yellow-500/30;
+  @apply bg-yellow-500/10 text-yellow-400 border border-yellow-500/20;
 }
 
 .risk-low {
-  @apply bg-green-500/20 text-green-400 border-green-500/30;
+  @apply bg-green-500/10 text-green-400 border border-green-500/20;
+}
+
+/* Badge styles */
+.badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+}
+
+.badge-blue {
+  @apply bg-blue-500/10 text-blue-400;
+}
+
+.badge-green {
+  @apply bg-green-500/10 text-green-400;
+}
+
+.badge-red {
+  @apply bg-red-500/10 text-red-400;
+}
+
+/* Dividers */
+.divider {
+  @apply h-px bg-gradient-to-r from-transparent via-[#333] to-transparent;
+}
+
+/* Data labels */
+.data-label {
+  @apply text-xs uppercase tracking-wider text-[#666];
+}
+
+.data-value {
+  @apply text-lg font-medium tabular-nums;
+}
+
+/* SpaceX-style accent line */
+.accent-line {
+  @apply h-0.5 bg-gradient-to-r from-[#3b82f6] to-transparent;
 }

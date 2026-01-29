@@ -30,6 +30,10 @@ interface ViewState {
     highRiskCount: number
     averageAltitude: number
   }
+  
+  // Deorbit simulation
+  deorbitTrajectory: { hours: number; altitude_km: number }[] | null
+  showEarthTexture: boolean
 }
 
 interface ViewActions {
@@ -54,6 +58,10 @@ interface ViewActions {
   updateSatellites: (satellites: SatellitePosition[]) => void
   setWsConnected: (connected: boolean) => void
   
+  // Deorbit
+  setDeorbitTrajectory: (trajectory: { hours: number; altitude_km: number }[] | null) => void
+  setShowEarthTexture: (show: boolean) => void
+  
   // Reset
   reset: () => void
 }
@@ -76,6 +84,8 @@ const initialState: ViewState = {
     highRiskCount: 0,
     averageAltitude: 0,
   },
+  deorbitTrajectory: null,
+  showEarthTexture: true,
 }
 
 export const useStore = create<ViewState & ViewActions>((set, get) => ({
@@ -115,6 +125,9 @@ export const useStore = create<ViewState & ViewActions>((set, get) => ({
   },
   
   setWsConnected: (connected) => set({ wsConnected: connected }),
+  
+  setDeorbitTrajectory: (trajectory) => set({ deorbitTrajectory: trajectory }),
+  setShowEarthTexture: (show) => set({ showEarthTexture: show }),
   
   reset: () => set(initialState),
 }))
