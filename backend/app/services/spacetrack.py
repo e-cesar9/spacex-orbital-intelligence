@@ -91,9 +91,9 @@ class SpaceTrackClient:
         self._authenticated = False
         self._cookies = None
         
-        # Get credentials from environment or settings
-        self.username = os.getenv("SPACETRACK_USER", "")
-        self.password = os.getenv("SPACETRACK_PASSWORD", "")
+        # Get credentials from settings (loads from .env)
+        self.username = self.settings.spacetrack_username
+        self.password = self.settings.spacetrack_password
     
     @property
     def is_configured(self) -> bool:
