@@ -68,7 +68,7 @@ export function Globe() {
 }
 
 function GlobeOverlay() {
-  const { wsConnected, lastUpdate, stats, isFullscreen, toggleFullscreen } = useStore()
+  const { lastUpdate, stats, isFullscreen, toggleFullscreen } = useStore()
   
   // Listen for fullscreen changes (ESC key, etc.)
   useEffect(() => {
@@ -97,22 +97,19 @@ function GlobeOverlay() {
     }
   }
 
+  // Format number in scientific notation
+  const formatScientific = (num: number) => {
+    if (num === 0) return '0'
+    const exp = Math.floor(Math.log10(Math.abs(num)))
+    const mantissa = (num / Math.pow(10, exp)).toFixed(2)
+    const superscript = exp.toString().split('').map(c => 
+      c === '-' ? '⁻' : '⁰¹²³⁴⁵⁶⁷⁸⁹'[parseInt(c)]
+    ).join('')
+    return `${mantissa} × 10${superscript}`
+  }
+
   return (
     <>
-      {/* Connection status */}
-      <div className="absolute top-4 left-4">
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full glass ${
-          wsConnected ? 'text-green-400' : 'text-red-400'
-        }`}>
-          <span className={`w-2 h-2 rounded-full ${
-            wsConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'
-          }`} />
-          <span className="text-sm">
-            {wsConnected ? 'Live' : 'Connecting...'}
-          </span>
-        </div>
-      </div>
-
       {/* Zoom controls */}
       <div className="absolute top-4 right-4 flex flex-col gap-1">
         <button
@@ -137,9 +134,9 @@ function GlobeOverlay() {
       </div>
 
       {/* Stats overlay - Left side */}
-      <div className="absolute bottom-4 left-4 glass rounded-xl p-4">
-        {/* Altitude Legend - Above stats */}
-        <div className="mb-3 pb-3 border-b border-white/10">
+      <div className="absolute bottom-4 left-4">
+        <div className="glass rounded-xl p-4">
+          {/* Altitude Legend */}
           <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Altitude Legend</div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
             <div className="flex items-center gap-1.5">
@@ -159,39 +156,33 @@ function GlobeOverlay() {
               <span className="text-gray-400">&gt;800km</span>
             </div>
           </div>
+          
+          {/* Stats */}
+          <div className="flex items-start gap-6 mt-3 pt-3 border-t border-white/10">
+            <div>
+              <div className="text-[10px] text-gray-500 uppercase tracking-wider">Satellites</div>
+              <div className="text-xl font-bold text-blue-400 font-mono">
+                {stats.totalSatellites.toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-gray-500 uppercase tracking-wider">Avg Alt</div>
+              <div className="text-sm font-bold text-green-400 font-mono">
+                ≈ {formatScientific(stats.averageAltitude)} km
+              </div>
+              <div className="text-sm font-bold text-gray-400 font-mono">
+                {formatScientific(stats.averageAltitude / 420 * 100)} %
+              </div>
+            </div>
+          </div>
         </div>
         
-        {/* Stats */}
-        <div className="flex items-end gap-6">
-          <div>
-            <div className="text-[10px] text-gray-500 uppercase tracking-wider">Satellites</div>
-            <div className="text-xl font-bold text-blue-400 font-mono">
-              {stats.totalSatellites.toLocaleString()}
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] text-gray-500 uppercase tracking-wider">Avg Alt</div>
-            <div className="text-lg font-bold text-green-400 font-mono">
-              {stats.averageAltitude}<span className="text-xs text-gray-500 ml-0.5">km</span>
-            </div>
-            <div className="text-[10px] text-gray-500">
-              ≈{(stats.averageAltitude / 420 * 100).toFixed(0)}% ISS
-            </div>
-          </div>
-        </div>
+        {/* Time - Outside the box */}
         {lastUpdate && (
-          <div className="text-[10px] text-gray-600 mt-2 font-mono">
+          <div className="text-[10px] text-gray-600 mt-2 font-mono text-center">
             {lastUpdate.toLocaleTimeString()}
           </div>
         )}
-      </div>
-
-      {/* Selected indicator - Right side */}
-      <div className="absolute bottom-4 right-4 glass rounded-lg px-3 py-2">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-400 ring-2 ring-red-400/50 animate-pulse" />
-          <span className="text-gray-400">Selected</span>
-        </div>
       </div>
     </>
   )
