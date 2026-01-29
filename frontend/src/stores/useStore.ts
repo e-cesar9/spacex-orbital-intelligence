@@ -108,8 +108,7 @@ export const useStore = create<ViewState & ViewActions>((set, get) => ({
   },
   
   selectSatellite: (id) => set({ 
-    selectedSatelliteId: id,
-    autoRotate: id ? false : get().autoRotate 
+    selectedSatelliteId: id
   }),
   
   setSelectedSatelliteDetail: (detail) => set({ selectedSatellite: detail }),
