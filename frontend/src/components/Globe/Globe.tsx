@@ -135,6 +135,13 @@ function GlobeOverlay() {
 
       {/* Stats overlay - Left side */}
       <div className="absolute bottom-4 left-4">
+        {/* Time - Above the box */}
+        {lastUpdate && (
+          <div className="text-[10px] text-gray-600 mb-2 font-mono">
+            {lastUpdate.toLocaleTimeString()}
+          </div>
+        )}
+        
         <div className="glass rounded-xl p-4">
           {/* Altitude Legend */}
           <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Altitude Legend</div>
@@ -176,13 +183,6 @@ function GlobeOverlay() {
             </div>
           </div>
         </div>
-        
-        {/* Time - Outside the box */}
-        {lastUpdate && (
-          <div className="text-[10px] text-gray-600 mt-2 font-mono text-center">
-            {lastUpdate.toLocaleTimeString()}
-          </div>
-        )}
       </div>
     </>
   )
