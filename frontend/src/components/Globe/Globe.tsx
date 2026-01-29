@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stars, PerspectiveCamera } from '@react-three/drei'
 import { Earth } from './Earth'
 import { Satellites, SelectedSatelliteHighlight } from './Satellites'
+import { OrbitPath } from './OrbitPath'
 import { useStore } from '@/stores/useStore'
 
 export function Globe() {
@@ -38,6 +39,9 @@ export function Globe() {
           
           {/* Selected satellite highlight */}
           <SelectedSatelliteHighlight />
+          
+          {/* Orbital path visualization */}
+          <OrbitPath />
         </Suspense>
 
         {/* Controls */}

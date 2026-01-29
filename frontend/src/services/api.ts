@@ -74,6 +74,41 @@ export async function getHotspots() {
   }>(`${API_BASE}/analysis/hotspots`)
 }
 
+export async function getConstellationHealth() {
+  return fetchJson<{
+    total_tracked: number
+    total_operational: number
+    operational_percentage: number
+    shells: {
+      shell: string
+      target_altitude_km: number
+      satellite_count: number
+      health_score: number
+    }[]
+    anomalies: {
+      satellite_id: string
+      name: string
+      altitude_km: number
+      status: string
+      urgency: string
+    }[]
+    anomaly_count: number
+  }>(`${API_BASE}/analysis/constellation/health`)
+}
+
+export async function getCollisionAlerts(minRisk = 0.3) {
+  return fetchJson<{
+    alert_count: number
+    alerts: {
+      satellite_1: { id: string; name: string }
+      satellite_2: { id: string; name: string }
+      distance_km: number
+      risk_score: number
+      severity: string
+    }[]
+  }>(`${API_BASE}/analysis/alerts?min_risk=${minRisk}`)
+}
+
 export async function simulateDeorbit(id: string, deltaV = 0.1) {
   const response = await fetch(
     `${API_BASE}/analysis/simulate/deorbit?satellite_id=${id}&delta_v=${deltaV}`,
