@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build: ./backend
+    container_name: spacex-orbital-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://spacex:spacex@postgres:5432/spacex_orbital
+      - DEBUG=false
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend (dev mode or build)
+  frontend:
+    build: ./frontend
+    container_name: spacex-orbital-frontend
+    ports:
+      - "3100:3000"
+    environment:
+      - VITE_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: spacex-orbital-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL (optional, for persistence)
+  postgres:
+    image: postgres:16-alpine
+    container_name: spacex-orbital-postgres
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=spacex
+      - POSTGRES_PASSWORD=spacex
+      - POSTGRES_DB=spacex_orbital
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spacex -d spacex_orbital"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  default:
+    name: spacex-orbital-network
