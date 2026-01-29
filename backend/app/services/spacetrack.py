@@ -21,6 +21,22 @@ BASE_URL = "https://www.space-track.org"
 
 
 @dataclass
+class SatelliteCatalogEntry:
+    """Enriched satellite information from catalog."""
+    norad_id: str
+    name: str
+    object_type: str
+    country: str
+    launch_date: Optional[str] = None
+    decay_date: Optional[str] = None
+    owner: Optional[str] = None
+    purpose: Optional[str] = None
+    perigee_km: Optional[float] = None
+    apogee_km: Optional[float] = None
+    inclination_deg: Optional[float] = None
+
+
+@dataclass
 class CDMAlert:
     """Conjunction Data Message from Space-Track."""
     cdm_id: str
@@ -42,8 +58,12 @@ class CDMAlert:
     # Risk classification
     emergency: bool  # Pc > 1e-4 or miss < 1km
     
+    # Enriched catalog data (optional)
+    sat1_catalog: Optional[SatelliteCatalogEntry] = None
+    sat2_catalog: Optional[SatelliteCatalogEntry] = None
+    
     def to_dict(self) -> dict:
-        return {
+        result = {
             "cdm_id": self.cdm_id,
             "created": self.created.isoformat(),
             "tca": self.tca.isoformat(),
@@ -63,6 +83,35 @@ class CDMAlert:
             "emergency": self.emergency,
             "risk_level": self._calculate_risk_level()
         }
+        
+        # Add enriched catalog data if available
+        if self.sat1_catalog:
+            result["satellite_1"]["catalog"] = {
+                "country": self.sat1_catalog.country,
+                "owner": self.sat1_catalog.owner,
+                "purpose": self.sat1_catalog.purpose,
+                "launch_date": self.sat1_catalog.launch_date,
+                "orbit": {
+                    "perigee_km": self.sat1_catalog.perigee_km,
+                    "apogee_km": self.sat1_catalog.apogee_km,
+                    "inclination_deg": self.sat1_catalog.inclination_deg
+                }
+            }
+        
+        if self.sat2_catalog:
+            result["satellite_2"]["catalog"] = {
+                "country": self.sat2_catalog.country,
+                "owner": self.sat2_catalog.owner,
+                "purpose": self.sat2_catalog.purpose,
+                "launch_date": self.sat2_catalog.launch_date,
+                "orbit": {
+                    "perigee_km": self.sat2_catalog.perigee_km,
+                    "apogee_km": self.sat2_catalog.apogee_km,
+                    "inclination_deg": self.sat2_catalog.inclination_deg
+                }
+            }
+        
+        return result
     
     def _calculate_risk_level(self) -> str:
         if self.emergency or self.probability > 1e-3:
@@ -312,6 +361,110 @@ class SpaceTrackClient:
             
         except Exception:
             return None
+    
+    async def get_satellite_catalog(self, norad_ids: list[str]) -> dict[str, SatelliteCatalogEntry]:
+        """
+        Fetch satellite catalog entries for given NORAD IDs.
+        
+        Returns a dict mapping NORAD ID to catalog entry.
+        """
+        if not await self._authenticate() or not norad_ids:
+            return {}
+        
+        client = await self._get_client()
+        result = {}
+        
+        try:
+            # Query satcat for multiple IDs at once
+            ids_str = ",".join(norad_ids[:50])  # Limit to 50 at a time
+            
+            query = (
+                f"/basicspacedata/query/class/satcat"
+                f"/NORAD_CAT_ID/{ids_str}"
+                f"/format/json"
+            )
+            
+            response = await client.get(query, cookies=self._cookies)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                for item in data:
+                    norad = item.get("NORAD_CAT_ID", "")
+                    if norad:
+                        result[norad] = SatelliteCatalogEntry(
+                            norad_id=norad,
+                            name=item.get("SATNAME", "Unknown"),
+                            object_type=item.get("OBJECT_TYPE", "UNKNOWN"),
+                            country=item.get("COUNTRY", "UNKNOWN"),
+                            launch_date=item.get("LAUNCH", None),
+                            decay_date=item.get("DECAY", None),
+                            owner=item.get("OWNER", None),
+                            purpose=self._get_purpose(item.get("SATNAME", "")),
+                            perigee_km=float(item.get("PERIGEE", 0) or 0),
+                            apogee_km=float(item.get("APOGEE", 0) or 0),
+                            inclination_deg=float(item.get("INCLINATION", 0) or 0)
+                        )
+        
+        except Exception as e:
+            print(f"Catalog fetch error: {e}")
+        
+        return result
+    
+    def _get_purpose(self, name: str) -> str:
+        """Infer satellite purpose from name."""
+        name_upper = name.upper()
+        if "STARLINK" in name_upper:
+            return "Internet/Communications"
+        elif "COSMOS" in name_upper or "KOSMOS" in name_upper:
+            return "Military/Government"
+        elif "ISS" in name_upper:
+            return "Space Station"
+        elif "GPS" in name_upper or "NAVSTAR" in name_upper:
+            return "Navigation"
+        elif "WEATHER" in name_upper or "NOAA" in name_upper or "METEO" in name_upper:
+            return "Weather"
+        elif any(x in name_upper for x in ["DEB", "R/B", "DEBRIS"]):
+            return "Debris"
+        else:
+            return "Unknown"
+    
+    async def get_cdm_enriched(
+        self,
+        hours_ahead: int = 72,
+        limit: int = 50
+    ) -> list[CDMAlert]:
+        """
+        Get CDM alerts enriched with satellite catalog data.
+        
+        This cross-references CDM data with the satellite catalog
+        to provide additional context about involved objects.
+        """
+        # First get basic CDM alerts
+        alerts = await self.get_all_cdm(hours_ahead=hours_ahead, limit=limit)
+        
+        if not alerts:
+            return alerts
+        
+        # Collect all unique NORAD IDs
+        norad_ids = set()
+        for alert in alerts:
+            if alert.sat1_norad:
+                norad_ids.add(alert.sat1_norad)
+            if alert.sat2_norad:
+                norad_ids.add(alert.sat2_norad)
+        
+        # Fetch catalog data
+        catalog = await self.get_satellite_catalog(list(norad_ids))
+        
+        # Enrich alerts
+        for alert in alerts:
+            if alert.sat1_norad in catalog:
+                alert.sat1_catalog = catalog[alert.sat1_norad]
+            if alert.sat2_norad in catalog:
+                alert.sat2_catalog = catalog[alert.sat2_norad]
+        
+        return alerts
     
     def _parse_datetime(self, dt_str: Optional[str]) -> datetime:
         """Parse Space-Track datetime format."""

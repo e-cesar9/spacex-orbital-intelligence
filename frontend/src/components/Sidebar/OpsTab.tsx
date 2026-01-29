@@ -10,12 +10,19 @@ import {
   ChevronUp,
   Zap,
   Clock,
-  TrendingUp
+  TrendingUp,
+  Download,
+  FileSpreadsheet,
+  Radio,
+  RefreshCw
 } from 'lucide-react'
 
 export function OpsTab() {
   return (
     <div className="space-y-4">
+      {/* Collision Monitoring Status */}
+      <MonitoringStatusCard />
+      
       {/* Fleet Health KPIs */}
       <FleetHealthCard />
       
@@ -30,6 +37,213 @@ export function OpsTab() {
       
       {/* Coverage Analysis */}
       <CoverageAnalysisCard />
+      
+      {/* Data Export */}
+      <ExportCard />
+    </div>
+  )
+}
+
+function MonitoringStatusCard() {
+  const [expanded, setExpanded] = useState(true)
+  
+  const { data, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['monitoring-summary'],
+    queryFn: async () => {
+      const res = await fetch('/api/v1/monitoring/summary')
+      return res.json()
+    },
+    refetchInterval: 60000, // Auto-refresh every minute
+  })
+
+  const handleManualCheck = async () => {
+    await fetch('/api/v1/monitoring/check', { method: 'POST' })
+    refetch()
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'NOMINAL': return 'text-green-400'
+      case 'WARNING': return 'text-yellow-400'
+      case 'CRITICAL': return 'text-red-400'
+      default: return 'text-gray-400'
+    }
+  }
+
+  const getStatusBg = (status: string) => {
+    switch (status) {
+      case 'NOMINAL': return 'bg-green-500'
+      case 'WARNING': return 'bg-yellow-500'
+      case 'CRITICAL': return 'bg-red-500 animate-pulse'
+      default: return 'bg-gray-500'
+    }
+  }
+
+  if (isLoading) {
+    return <div className="bg-spacex-dark rounded-lg p-4 animate-pulse h-20" />
+  }
+
+  return (
+    <div className="bg-spacex-dark rounded-lg overflow-hidden">
+      <button 
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between p-4 hover:bg-spacex-border/30 transition"
+      >
+        <div className="flex items-center gap-2">
+          <Radio size={16} className={data?.status === 'CRITICAL' ? 'text-red-400 animate-pulse' : 'text-blue-400'} />
+          <h3 className="font-medium">Collision Monitor</h3>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`w-2 h-2 rounded-full ${getStatusBg(data?.status || 'UNKNOWN')}`} />
+          <span className={`text-sm font-bold ${getStatusColor(data?.status || 'UNKNOWN')}`}>
+            {data?.status || 'UNKNOWN'}
+          </span>
+          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+      </button>
+      
+      {expanded && (
+        <div className="px-4 pb-4 space-y-3">
+          {/* Stats grid */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-spacex-card rounded-lg p-2 text-center">
+              <div className="text-lg font-bold font-mono text-blue-400">
+                {data?.total_conjunctions || 0}
+              </div>
+              <div className="text-[10px] text-gray-500 uppercase">Conjunctions</div>
+            </div>
+            <div className="bg-spacex-card rounded-lg p-2 text-center">
+              <div className={`text-lg font-bold font-mono ${(data?.critical_events || 0) > 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                {data?.critical_events || 0}
+              </div>
+              <div className="text-[10px] text-gray-500 uppercase">Critical</div>
+            </div>
+            <div className="bg-spacex-card rounded-lg p-2 text-center">
+              <div className={`text-lg font-bold font-mono ${(data?.high_risk_events || 0) > 0 ? 'text-yellow-400' : 'text-gray-400'}`}>
+                {data?.high_risk_events || 0}
+              </div>
+              <div className="text-[10px] text-gray-500 uppercase">High Risk</div>
+            </div>
+          </div>
+
+          {/* Action required warning */}
+          {data?.action_required && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-red-400 text-xs font-medium">
+                <AlertTriangle size={12} />
+                <span>ACTION REQUIRED - Critical conjunction detected</span>
+              </div>
+            </div>
+          )}
+
+          {/* Manual check button */}
+          <button
+            onClick={handleManualCheck}
+            disabled={isFetching}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-spacex-card rounded-lg hover:bg-spacex-border transition text-sm disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
+            <span>{isFetching ? 'Checking...' : 'Run Manual Check'}</span>
+          </button>
+
+          {/* Last check timestamp */}
+          {data?.timestamp && (
+            <div className="text-[10px] text-gray-500 text-center font-mono">
+              Last check: {new Date(data.timestamp).toLocaleTimeString()}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ExportCard() {
+  const [expanded, setExpanded] = useState(false)
+  const [exporting, setExporting] = useState<string | null>(null)
+
+  const handleExport = async (endpoint: string, filename: string) => {
+    setExporting(endpoint)
+    try {
+      const response = await fetch(`/api/v1/export/${endpoint}`)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Export failed:', error)
+    } finally {
+      setExporting(null)
+    }
+  }
+
+  return (
+    <div className="bg-spacex-dark rounded-lg overflow-hidden">
+      <button 
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between p-4 hover:bg-spacex-border/30 transition"
+      >
+        <div className="flex items-center gap-2">
+          <Download size={16} className="text-purple-400" />
+          <h3 className="font-medium">Export Data</h3>
+        </div>
+        {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </button>
+      
+      {expanded && (
+        <div className="px-4 pb-4 space-y-2">
+          <p className="text-xs text-gray-500 mb-3">Download data for analysis</p>
+          
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => handleExport('satellites/csv', 'satellites.csv')}
+              disabled={!!exporting}
+              className="flex items-center gap-2 px-3 py-2 bg-spacex-card rounded-lg hover:bg-spacex-border transition text-sm disabled:opacity-50"
+            >
+              <FileSpreadsheet size={14} className="text-green-400" />
+              <span>Satellites CSV</span>
+            </button>
+            
+            <button
+              onClick={() => handleExport('satellites/json', 'satellites.json')}
+              disabled={!!exporting}
+              className="flex items-center gap-2 px-3 py-2 bg-spacex-card rounded-lg hover:bg-spacex-border transition text-sm disabled:opacity-50"
+            >
+              <FileSpreadsheet size={14} className="text-blue-400" />
+              <span>Satellites JSON</span>
+            </button>
+            
+            <button
+              onClick={() => handleExport('cdm/csv', 'cdm_alerts.csv')}
+              disabled={!!exporting}
+              className="flex items-center gap-2 px-3 py-2 bg-spacex-card rounded-lg hover:bg-spacex-border transition text-sm disabled:opacity-50"
+            >
+              <FileSpreadsheet size={14} className="text-yellow-400" />
+              <span>CDM Alerts CSV</span>
+            </button>
+            
+            <button
+              onClick={() => handleExport('analytics/csv', 'analytics.csv')}
+              disabled={!!exporting}
+              className="flex items-center gap-2 px-3 py-2 bg-spacex-card rounded-lg hover:bg-spacex-border transition text-sm disabled:opacity-50"
+            >
+              <FileSpreadsheet size={14} className="text-purple-400" />
+              <span>Analytics CSV</span>
+            </button>
+          </div>
+          
+          {exporting && (
+            <div className="text-xs text-gray-500 text-center mt-2">
+              Exporting {exporting}...
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

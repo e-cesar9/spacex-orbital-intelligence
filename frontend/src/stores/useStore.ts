@@ -6,6 +6,7 @@ interface ViewState {
   autoRotate: boolean
   showOrbits: boolean
   showLabels: boolean
+  isFullscreen: boolean
   
   // Selection
   selectedSatelliteId: string | null
@@ -41,6 +42,7 @@ interface ViewActions {
   setAutoRotate: (value: boolean) => void
   setShowOrbits: (value: boolean) => void
   setShowLabels: (value: boolean) => void
+  toggleFullscreen: () => void
   
   // Selection
   selectSatellite: (id: string | null) => void
@@ -70,6 +72,7 @@ const initialState: ViewState = {
   autoRotate: true,
   showOrbits: false,
   showLabels: true,
+  isFullscreen: false,
   selectedSatelliteId: null,
   selectedSatellite: null,
   altitudeRange: [200, 2000],
@@ -94,6 +97,15 @@ export const useStore = create<ViewState & ViewActions>((set, get) => ({
   setAutoRotate: (value) => set({ autoRotate: value }),
   setShowOrbits: (value) => set({ showOrbits: value }),
   setShowLabels: (value) => set({ showLabels: value }),
+  toggleFullscreen: () => {
+    const newFullscreen = !get().isFullscreen
+    if (newFullscreen) {
+      document.documentElement.requestFullscreen?.()
+    } else {
+      document.exitFullscreen?.()
+    }
+    set({ isFullscreen: newFullscreen, sidebarOpen: !newFullscreen })
+  },
   
   selectSatellite: (id) => set({ 
     selectedSatelliteId: id,

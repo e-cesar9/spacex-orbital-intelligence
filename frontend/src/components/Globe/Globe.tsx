@@ -1,10 +1,11 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stars, PerspectiveCamera } from '@react-three/drei'
 import { Earth } from './Earth'
 import { Satellites, SelectedSatelliteHighlight } from './Satellites'
 import { OrbitPath } from './OrbitPath'
 import { useStore } from '@/stores/useStore'
+import { Maximize2, Minimize2 } from 'lucide-react'
 
 export function Globe() {
   const { satellites, autoRotate } = useStore()
@@ -67,7 +68,22 @@ export function Globe() {
 }
 
 function GlobeOverlay() {
-  const { wsConnected, lastUpdate, stats } = useStore()
+  const { wsConnected, lastUpdate, stats, isFullscreen, toggleFullscreen } = useStore()
+  
+  // Listen for fullscreen changes (ESC key, etc.)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isNowFullscreen = !!document.fullscreenElement
+      if (isNowFullscreen !== useStore.getState().isFullscreen) {
+        useStore.setState({ 
+          isFullscreen: isNowFullscreen,
+          sidebarOpen: !isNowFullscreen
+        })
+      }
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
 
   const handleZoom = (delta: number) => {
     // @ts-ignore
@@ -110,6 +126,13 @@ function GlobeOverlay() {
           className="w-10 h-10 glass rounded-lg flex items-center justify-center text-xl font-bold hover:bg-white/10 transition"
         >
           −
+        </button>
+        <button
+          onClick={toggleFullscreen}
+          className="w-10 h-10 glass rounded-lg flex items-center justify-center hover:bg-white/10 transition mt-2"
+          title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+        >
+          {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
         </button>
       </div>
 

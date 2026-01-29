@@ -103,12 +103,14 @@ async def get_starlink_cdm(
 @router.get("/all")
 async def get_all_cdm(
     hours_ahead: int = Query(72, ge=1, le=168),
-    limit: int = Query(50, ge=1, le=200)
+    limit: int = Query(50, ge=1, le=200),
+    enrich: bool = Query(False, description="Include satellite catalog data")
 ):
     """
     Get all CDM alerts (not just Starlink).
     
     Returns highest probability conjunctions first.
+    Set enrich=true to include satellite catalog metadata (country, owner, orbit params).
     """
     if not spacetrack_client.is_configured:
         return {
@@ -116,16 +118,22 @@ async def get_all_cdm(
             "status": "UNAVAILABLE"
         }
     
-    cache_key = f"cdm:all:{hours_ahead}:{limit}"
+    cache_key = f"cdm:all:{hours_ahead}:{limit}:{enrich}"
     cached = await cache.get(cache_key)
     if cached:
         return cached
     
     try:
-        alerts = await spacetrack_client.get_all_cdm(
-            hours_ahead=hours_ahead,
-            limit=limit
-        )
+        if enrich:
+            alerts = await spacetrack_client.get_cdm_enriched(
+                hours_ahead=hours_ahead,
+                limit=limit
+            )
+        else:
+            alerts = await spacetrack_client.get_all_cdm(
+                hours_ahead=hours_ahead,
+                limit=limit
+            )
         
         # Identify Starlink involvement
         starlink_involved = [a for a in alerts if "STARLINK" in a.sat1_name.upper() or "STARLINK" in a.sat2_name.upper()]
@@ -134,13 +142,14 @@ async def get_all_cdm(
             "source": "Space-Track.org (18th SDS)",
             "query_time": datetime.now(timezone.utc).isoformat(),
             "hours_ahead": hours_ahead,
+            "enriched": enrich,
             "summary": {
                 "total_alerts": len(alerts),
                 "starlink_involved": len(starlink_involved),
                 "emergency_count": len([a for a in alerts if a.emergency])
             },
             "alerts": [a.to_dict() for a in alerts],
-            "note": "Sorted by collision probability (highest first)"
+            "note": "Sorted by collision probability (highest first)" + (" - includes catalog data" if enrich else "")
         }
         
         await cache.set(cache_key, result, ttl=900)
