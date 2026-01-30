@@ -1,7 +1,8 @@
 """
 CSV/JSON Export endpoints for all dashboard data.
+Rate limited to prevent abuse.
 """
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone
 import csv
@@ -10,13 +11,15 @@ import json
 
 from app.services.tle_service import tle_service
 from app.services.spacetrack import spacetrack_client
+from app.core.security import limiter
 
 router = APIRouter(prefix="/export", tags=["Data Export"])
 
 
 @router.get("/satellites/csv")
-async def export_satellites_csv():
-    """Export all satellite positions as CSV."""
+@limiter.limit("10/minute")
+async def export_satellites_csv(request: Request):
+    """Export all satellite positions as CSV. Rate limited: 10/min."""
     
     positions = tle_service.get_all_positions()
     
@@ -54,8 +57,9 @@ async def export_satellites_csv():
 
 
 @router.get("/satellites/json")
-async def export_satellites_json():
-    """Export all satellite positions as JSON."""
+@limiter.limit("10/minute")
+async def export_satellites_json(request: Request):
+    """Export all satellite positions as JSON. Rate limited: 10/min."""
     
     positions = tle_service.get_all_positions()
     
@@ -77,10 +81,12 @@ async def export_satellites_json():
 
 
 @router.get("/cdm/csv")
+@limiter.limit("10/minute")
 async def export_cdm_csv(
+    request: Request,
     hours_ahead: int = Query(72, ge=1, le=168)
 ):
-    """Export Conjunction Data Messages as CSV."""
+    """Export Conjunction Data Messages as CSV. Rate limited: 10/min."""
     
     if not spacetrack_client.is_configured:
         return {"error": "Space-Track not configured"}
@@ -135,10 +141,12 @@ async def export_cdm_csv(
 
 
 @router.get("/cdm/json")
+@limiter.limit("10/minute")
 async def export_cdm_json(
+    request: Request,
     hours_ahead: int = Query(72, ge=1, le=168)
 ):
-    """Export Conjunction Data Messages as JSON."""
+    """Export Conjunction Data Messages as JSON. Rate limited: 10/min."""
     
     if not spacetrack_client.is_configured:
         return {"error": "Space-Track not configured"}
@@ -172,8 +180,9 @@ async def export_cdm_json(
 
 
 @router.get("/analytics/csv")
-async def export_analytics_csv():
-    """Export analytics data as CSV."""
+@limiter.limit("10/minute")
+async def export_analytics_csv(request: Request):
+    """Export analytics data as CSV. Rate limited: 10/min."""
     from app.api.analytics import get_collision_trends, get_orbital_density_map
     
     output = io.StringIO()

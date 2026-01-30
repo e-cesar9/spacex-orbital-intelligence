@@ -2,11 +2,13 @@
 Monitoring API endpoints.
 
 Provides endpoints for collision monitoring status and control.
+Protected endpoints require X-API-Key header.
 """
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
 from datetime import datetime, timezone
 
 from app.services.monitoring import collision_monitor
+from app.core.security import verify_api_key, limiter
 
 router = APIRouter(prefix="/monitoring", tags=["Collision Monitoring"])
 
@@ -36,11 +38,13 @@ async def trigger_manual_check(
 @router.post("/start")
 async def start_background_monitoring(
     interval_minutes: int = Query(15, ge=5, le=60),
-    probability_threshold: float = Query(1e-5)
+    probability_threshold: float = Query(1e-5),
+    _auth: bool = Depends(verify_api_key)
 ):
     """
     Start continuous background monitoring.
     
+    Requires X-API-Key header.
     Checks for CDM alerts at the specified interval and logs critical events.
     """
     return await collision_monitor.start_background_monitoring(
@@ -50,8 +54,8 @@ async def start_background_monitoring(
 
 
 @router.post("/stop")
-async def stop_background_monitoring():
-    """Stop background monitoring."""
+async def stop_background_monitoring(_auth: bool = Depends(verify_api_key)):
+    """Stop background monitoring. Requires X-API-Key header."""
     return collision_monitor.stop_background_monitoring()
 
 
