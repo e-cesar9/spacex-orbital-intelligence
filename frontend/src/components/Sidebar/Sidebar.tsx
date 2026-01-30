@@ -36,7 +36,7 @@ export function Sidebar() {
       {/* Toggle button - larger on mobile */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="self-center -ml-10 w-10 h-16 md:w-8 md:h-14 md:-ml-8 bg-spacex-accent/90 hover:bg-spacex-accent rounded-l-xl flex items-center justify-center transition shadow-lg shadow-spacex-accent/30"
+        className="self-center -ml-10 w-10 h-16 md:w-8 md:h-14 md:-ml-8 bg-spacex-card hover:bg-spacex-border rounded-l-xl flex items-center justify-center transition"
       >
         {sidebarOpen ? <ChevronRight size={22} className="md:w-5 md:h-5" /> : <ChevronLeft size={22} className="md:w-5 md:h-5" />}
       </button>
