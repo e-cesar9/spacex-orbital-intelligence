@@ -33,12 +33,12 @@ export function Sidebar() {
       fixed right-0 top-0 h-full z-10 flex transition-transform duration-300
       ${sidebarOpen ? 'translate-x-0' : 'translate-x-[calc(100%-48px)]'}
     `}>
-      {/* Toggle button */}
+      {/* Toggle button - larger on mobile */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="self-center -ml-6 w-6 h-12 bg-spacex-card rounded-l-lg flex items-center justify-center hover:bg-spacex-border transition"
+        className="self-center -ml-10 w-10 h-16 md:w-8 md:h-14 md:-ml-8 bg-spacex-accent/90 hover:bg-spacex-accent rounded-l-xl flex items-center justify-center transition shadow-lg shadow-spacex-accent/30"
       >
-        {sidebarOpen ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        {sidebarOpen ? <ChevronRight size={22} className="md:w-5 md:h-5" /> : <ChevronLeft size={22} className="md:w-5 md:h-5" />}
       </button>
 
       {/* Sidebar content */}
