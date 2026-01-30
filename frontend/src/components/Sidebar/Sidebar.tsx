@@ -30,7 +30,7 @@ export function Sidebar() {
 
   return (
     <div className={`
-      fixed right-0 top-0 h-full z-10 flex transition-transform duration-300
+      fixed right-0 top-0 h-full z-20 flex transition-transform duration-300
       ${sidebarOpen ? 'translate-x-0' : 'translate-x-[calc(100%-48px)]'}
     `}>
       {/* Toggle button - larger on mobile */}
@@ -42,7 +42,7 @@ export function Sidebar() {
       </button>
 
       {/* Sidebar content */}
-      <div className="w-96 h-full bg-spacex-card/95 backdrop-blur-lg border-l border-spacex-border flex flex-col">
+      <div className="w-80 md:w-96 h-full bg-spacex-card/95 backdrop-blur-lg border-l border-spacex-border flex flex-col">
         {/* Tabs */}
         <div className="flex border-b border-spacex-border">
           {tabs.map(tab => (

@@ -20,8 +20,8 @@ function AppContent() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-spacex-dark">
-      {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-20 pointer-events-none">
+      {/* Header - z-10 so sidebar (z-20) covers it on mobile */}
+      <header className="absolute top-0 left-0 right-0 z-10 pointer-events-none">
         <div className="p-4 pb-8 flex justify-between items-center">
           <div className="pointer-events-auto">
             <div className="flex items-center gap-2">
